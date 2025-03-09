@@ -1,0 +1,18 @@
+version: '3.9'
+
+services:
+  db:
+    image: postgres:latest
+    env_file:
+      - ./conf/db.env
+    container_name: pg_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./conf/pg_data:/var/lib/postgresql/data
+    
+  adminer:
+    image: adminer:latest 
+    container_name: pg_adminer
+    ports: 
+    - "8085:8080"
