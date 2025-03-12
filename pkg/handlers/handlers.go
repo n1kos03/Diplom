@@ -172,3 +172,51 @@ func  POSTRegisterUser(w http.ResponseWriter, r *http.Request) {
 		"id": userID,
 	})
 }
+
+func PUTUser(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPut {
+		http.Error(w, "Invalid method", http.StatusMethodNotAllowed)
+		return
+	}
+
+	URLQuery := r.URL.Query()
+	id := URLQuery.Get("id")
+	nickname := URLQuery.Get("nickname")
+	bio := URLQuery.Get("bio")
+
+	if nickname != "" {
+		query := `UPDATE "User" SET "Nickname" = $1 WHERE "ID" = $2`
+		_, err := database.DB.Exec(query, nickname, id)
+		if err != nil {
+			log.Println("Error updating user: ", err)
+			http.Error(w, "Server error", http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"message": "nickname updated",
+			"id": id,
+			"nickname": nickname,
+		})
+	}
+
+	if bio != "" {
+		query := `UPDATE "User" SET "Bio" = $1 WHERE "ID" = $2`
+		_, err := database.DB.Exec(query, bio, id)
+		if err != nil {
+			log.Println("Error updating user: ", err)
+			http.Error(w, "Server error", http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"message": "bio updated",
+			"id": id,
+			"bio": bio,
+		})
+	}
+}

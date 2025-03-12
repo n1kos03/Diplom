@@ -28,7 +28,8 @@ func main() {
 	mux.HandleFunc("/", handlers.MainRoute)
 	mux.HandleFunc("GET /users/", handlers.GETUsersHandler)
 	mux.HandleFunc("POST /users/register/", handlers.POSTRegisterUser)
-	
+	mux.HandleFunc("PUT /users/", handlers.PUTUser)
+
 	// Start server
 	log.Println("Server is running on port 8080")
 	err := http.ListenAndServe(":8080", mux)
