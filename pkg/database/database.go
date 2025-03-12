@@ -29,12 +29,6 @@ func ConnectDB() {
 	if err != nil {
 		log.Fatal("Error connecting to database: ", err)
 	}
-	
-	if DB != nil {
-		log.Println("Database connected")
-	} else {
-		log.Println("Database not connected")
-	}
 
 	// Ping database to check if connection is established
 	err = DB.Ping()

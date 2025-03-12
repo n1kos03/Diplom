@@ -12,6 +12,9 @@ func main() {
 	// Connect to database
 	database.ConnectDB()
 
+	// Close database connection
+	defer database.DB.Close()
+
 	if database.DB != nil {
 		log.Println("Database connected")
 	} else {
@@ -20,13 +23,11 @@ func main() {
 
 	// Allocate a new mux router to route requests
 	mux := http.NewServeMux()
-
-	// Close database connection
-	defer database.DB.Close()
 	
 	// Handle requests
 	mux.HandleFunc("/", handlers.MainRoute)
-	mux.HandleFunc("GET /users/", handlers.GetUsers)
+	mux.HandleFunc("GET /users/", handlers.GETUsers)
+	mux.HandleFunc("POST /users/register/", handlers.POSTRegisterUser)
 	
 	// Start server
 	log.Println("Server is running on port 8080")
