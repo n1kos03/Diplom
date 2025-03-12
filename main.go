@@ -26,7 +26,7 @@ func main() {
 	
 	// Handle requests
 	mux.HandleFunc("/", handlers.MainRoute)
-	mux.HandleFunc("GET /users/", handlers.GETUsers)
+	mux.HandleFunc("GET /users/", handlers.GETUsersHandler)
 	mux.HandleFunc("POST /users/register/", handlers.POSTRegisterUser)
 	
 	// Start server

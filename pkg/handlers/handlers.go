@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strconv"
 
 	"Diplom/pkg/database"
 	"Diplom/pkg/models"
@@ -12,6 +13,21 @@ import (
 
 func MainRoute(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "There would be main page of web site")
+}
+
+func GETUsersHandler(w http.ResponseWriter, r *http.Request) {
+	URLQuery := r.URL.Query()
+	id := URLQuery.Get("id")
+	nickname := URLQuery.Get("nickname")
+
+	switch {
+	case id != "":
+			GETUserByID(w, id)	
+	case nickname != "":
+			GETUserByNickname(w, nickname)
+		default:
+			GETUsers(w, r)
+	}
 }
 
 func GETUsers(w http.ResponseWriter, r *http.Request) {
@@ -60,6 +76,67 @@ func GETUsers(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusOK)
 	w.Write(j)
+}
+
+func GETUserByID(w http.ResponseWriter, idStr string) {
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		log.Println("Error converting ID to int: ", err)
+		http.Error(w, "Invalid ID", http.StatusBadRequest)
+		return
+	}
+
+	query := `SELECT "ID", "Nickname", "Email", "Password", "Bio", "Created_at" FROM "User" WHERE "ID" = $1`
+
+	row, err := database.DB.Query(query, id)
+	if err != nil {
+		log.Println("Error getting user: ", err)
+		http.Error(w, "Server error", http.StatusInternalServerError)
+		return
+	}
+
+	var user models.User
+
+	if row.Next() {
+		err = row.Scan(&user.ID, &user.Nickname, &user.Email, &user.Password, &user.Bio, &user.CreatedAt)
+		if err != nil {
+			log.Println("Error scanning row: ", err)
+			http.Error(w, "Error scanning data", http.StatusInternalServerError)
+			return
+		}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+
+	json.NewEncoder(w).Encode(user)
+}
+
+func GETUserByNickname(w http.ResponseWriter, nickname string) {
+	query := `SELECT "ID","Nickname", "Email", "Password", "Bio", "Created_at" FROM "User" WHERE "Nickname" = $1`
+
+	row, err := database.DB.Query(query, nickname)
+	if err != nil {
+		log.Println("Error getting user: ", err)
+		http.Error(w, "Server error", http.StatusInternalServerError)
+		return
+	}
+
+	var user models.User
+
+	if row.Next() {
+		err = row.Scan(&user.ID, &user.Nickname, &user.Email, &user.Password, &user.Bio, &user.CreatedAt)
+		if err != nil {
+			log.Println("Error scanning row: ", err)
+			http.Error(w, "Error scanning data", http.StatusInternalServerError)
+			return
+		}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+
+	json.NewEncoder(w).Encode(user)
 }
 
 // TODO: Add validation and encryption of password
