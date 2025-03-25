@@ -183,3 +183,51 @@ func POSTCourseHandler(w http.ResponseWriter, r *http.Request) {
 		"id": course.ID,
 	})
 }
+
+func PUTCOurse(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPut {
+		http.Error(w, "Invalid method", http.StatusMethodNotAllowed)
+		return
+	}
+
+	URLQuery := r.URL.Query()
+	id := URLQuery.Get("id")
+	title := URLQuery.Get("title")
+	description := URLQuery.Get("description")
+
+	if title != "" {
+		query := `UPDATE "Course" SET "Title" = $1 WHERE "ID" = $2`
+		_, err := database.DB.Exec(query, title, id)
+		if err != nil {
+			log.Println("Error updating course: ", err)
+			http.Error(w, "Server error", http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"message": "title updated",
+			"id": id,
+			"title": title,
+		})
+	}
+
+	if description != "" {
+		query := `UPDATE "Course" SET "Description" = $1 WHERE "ID" = $2`
+		_, err := database.DB.Exec(query, description, id)
+		if err != nil {
+			log.Println("Error updating course: ", err)
+			http.Error(w, "Server error", http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"message": "description updated",
+			"id": id,
+			"title": description,
+		})
+	}
+}
