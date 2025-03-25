@@ -42,6 +42,7 @@ func main() {
 	mux.HandleFunc("PUT /users/", handlers.PUTUser)
 
 	mux.HandleFunc("GET /courses/", handlers.GETCoursesHandler)
+	mux.HandleFunc("POST /courses/course_creation/", auth.AuthMiddleware(handlers.POSTCourseHandler))
 
 	// Start server
 	log.Println("Server is running on port 8080")

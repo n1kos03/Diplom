@@ -4,10 +4,14 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"os"
 	"strconv"
+	"strings"
 
 	"Diplom/pkg/database"
 	"Diplom/pkg/models"
+
+	"github.com/golang-jwt/jwt/v5"
 )
 
 func GETCoursesHandler (w http.ResponseWriter, r *http.Request) {
@@ -129,4 +133,53 @@ func GETCourseByTitle(w http.ResponseWriter, title string) {
 	w.WriteHeader(http.StatusOK)
 
 	json.NewEncoder(w).Encode(courses)
+}
+
+func POSTCourseHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Invalid method", http.StatusMethodNotAllowed)
+		return
+	}
+
+	authString := r.Header.Get("Authorization")
+	
+	if authString == "" {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	tokenString := strings.TrimPrefix(authString, "Bearer ")
+
+	claims := jwt.MapClaims{}
+	token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
+		return []byte(os.Getenv("JWT_SECRET")), nil
+	})
+	if err != nil || !token.Valid {
+		http.Error(w, "Invalid token", http.StatusUnauthorized)
+		return
+	}
+
+	var course models.Course
+	
+	err = json.NewDecoder(r.Body).Decode(&course)
+	if err != nil {
+		log.Println("Error decoding data: ", err)
+		http.Error(w, "Error decoding data", http.StatusInternalServerError)
+		return
+	}
+
+	
+	err = database.DB.QueryRow(`INSERT INTO "Course" ("Author_id", "Title", "Description") VALUES ($1, $2, $3) RETURNING "ID"`, claims["id"], course.Title, course.Description).Scan(&course.ID)
+	if err != nil {
+		log.Println("Error inserting course: ", err)
+		http.Error(w, "Server error", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"message": "Course created",
+		"id": course.ID,
+	})
 }
