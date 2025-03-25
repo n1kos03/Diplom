@@ -9,6 +9,8 @@ import (
 
 	"Diplom/pkg/database"
 	"Diplom/pkg/models"
+
+	"golang.org/x/crypto/bcrypt"
 )
 
 func MainRoute(w http.ResponseWriter, r *http.Request) {
@@ -137,7 +139,6 @@ func GETUserByNickname(w http.ResponseWriter, nickname string) {
 	json.NewEncoder(w).Encode(users)
 }
 
-// TODO: Add validation and encryption of password
 func  POSTRegisterUser(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Invalid method", http.StatusMethodNotAllowed)
@@ -153,10 +154,30 @@ func  POSTRegisterUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	var userID int
+
+	err = database.DB.QueryRow(`SELECT "ID" FROM "User" WHERE "Email" = $1`, user.Email).Scan(&userID)
+	if err != nil {
+		log.Println("Error getting user ID: ", err)
+		http.Error(w, "Server error", http.StatusInternalServerError)
+		return
+	}
+	if userID != 0 {
+		http.Error(w, "User with this email already exists", http.StatusBadRequest)
+		return
+	}
+
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
+	if err != nil {
+		log.Println("Error hashing password: ", err)
+		http.Error(w, "Server error", http.StatusInternalServerError)
+		return
+	}
+
 	query := `INSERT INTO "User" ("Nickname", "Email", "Password") VALUES ($1, $2, $3) RETURNING "ID"`
 	
-	var userID int
-	err = database.DB.QueryRow(query, user.Nickname, user.Email, user.Password).Scan(&userID)
+	// var userID int
+	err = database.DB.QueryRow(query, user.Nickname, user.Email, string(hashedPassword)).Scan(&userID)
 	if err != nil {
 		log.Println("Error inserting user: ", err)
 		http.Error(w, "Server error", http.StatusInternalServerError)

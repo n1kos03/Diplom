@@ -4,11 +4,19 @@ import (
 	"log"
 	"net/http"
 
+	"Diplom/pkg/auth"
 	"Diplom/pkg/database"
 	"Diplom/pkg/handlers"
+
+	"github.com/joho/godotenv"
 )
 
 func main() {
+	err := godotenv.Load("./conf/jwt.env")
+	if err != nil {
+		log.Fatal("Error loading .env file: ", err)
+	}
+
 	// Connect to database
 	database.ConnectDB()
 
@@ -25,7 +33,10 @@ func main() {
 	mux := http.NewServeMux()
 	
 	// Handle requests
-	mux.HandleFunc("/", handlers.MainRoute)
+	mux.HandleFunc("/", auth.AuthMiddleware(handlers.MainRoute))
+
+	mux.HandleFunc("POST /login/", auth.LoginHandler)
+
 	mux.HandleFunc("GET /users/", handlers.GETUsersHandler)
 	mux.HandleFunc("POST /users/register/", handlers.POSTRegisterUser)
 	mux.HandleFunc("PUT /users/", handlers.PUTUser)
@@ -34,7 +45,7 @@ func main() {
 
 	// Start server
 	log.Println("Server is running on port 8080")
-	err := http.ListenAndServe(":8080", mux)
+	err = http.ListenAndServe(":8080", mux)
 	if err != nil {
 		log.Fatal("Error starting server: ", err)
 	}
