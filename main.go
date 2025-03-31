@@ -40,6 +40,7 @@ func main() {
 	mux.HandleFunc("GET /users/", handlers.GETUsersHandler)
 	mux.HandleFunc("POST /users/register/", handlers.POSTRegisterUser)
 	mux.HandleFunc("PUT /users/", handlers.PUTUser)
+	mux.HandleFunc("DELETE /users/", handlers.DELETEUserHandler)
 
 	mux.HandleFunc("GET /courses/", handlers.GETCoursesHandler)
 	mux.HandleFunc("POST /courses/course_creation/", auth.AuthMiddleware(handlers.POSTCourseHandler))

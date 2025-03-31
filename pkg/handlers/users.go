@@ -239,3 +239,27 @@ func PUTUser(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 }
+
+func DELETEUserHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodDelete {
+		http.Error(w, "Invalid method", http.StatusMethodNotAllowed)
+		return
+	}
+
+	URLQuery := r.URL.Query()
+	id := URLQuery.Get("id")
+
+	_, err := database.DB.Exec(`DELETE FROM "User" WHERE "ID" = $1`, id)
+	if err != nil {
+		log.Println("Error deleting user: ", err)
+		http.Error(w, "Server error", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"message": "user deleted",
+		"id": id,
+	})
+}
