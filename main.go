@@ -7,6 +7,7 @@ import (
 	"Diplom/pkg/auth"
 	"Diplom/pkg/database"
 	"Diplom/pkg/handlers"
+	objStor "Diplom/pkg/obj_storage"
 
 	"github.com/joho/godotenv"
 )
@@ -14,7 +15,12 @@ import (
 func main() {
 	err := godotenv.Load("./conf/jwt.env")
 	if err != nil {
-		log.Fatal("Error loading .env file: ", err)
+		log.Fatal("Error loading jwt.env file: ", err)
+	}
+
+	err = godotenv.Load("./conf/minio.env")
+	if err != nil {
+		log.Fatal("Error loading minio.env file: ", err)
 	}
 
 	// Connect to database
@@ -28,6 +34,9 @@ func main() {
 	} else {
 		log.Println("Database not connected")
 	}
+
+	// Connect to minio
+	objStor.InitMinioClient()
 
 	// Allocate a new mux router to route requests
 	mux := http.NewServeMux()
@@ -45,6 +54,8 @@ func main() {
 	mux.HandleFunc("GET /courses/", handlers.GETCoursesHandler)
 	mux.HandleFunc("POST /courses/course_creation/", auth.AuthMiddleware(handlers.POSTCourseHandler))
 	mux.HandleFunc("PUT /courses/", handlers.PUTCOurse)
+
+	mux.HandleFunc("POST /courses/course_materials/upload/", handlers.POSTCourseMaterialsHandler)
 
 	// Start server
 	log.Println("Server is running on port 8080")

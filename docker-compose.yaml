@@ -16,3 +16,15 @@ services:
     container_name: pg_adminer
     ports: 
     - "8085:8080"
+
+  minio:
+    image: minio/minio:latest
+    container_name: minio
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    env_file:
+      - ./conf/minio.env
+    command: server /data --console-address ":9001"
+    volumes:
+      - ./conf/minio_data:/data
