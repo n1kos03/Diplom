@@ -18,3 +18,11 @@ type Course struct {
 	Description string `json:"description"`
 	CreatedAt time.Time `json:"created_at"`
 }
+
+type CourseMaterials struct {
+	ID int `json:"id"`
+	CourseID int `json:"course_id"`
+	ContentURL string `json:"content_url"`
+	Description string `json:"description"`
+	CreatedAt time.Time `json:"created_at"`
+}

@@ -2,8 +2,10 @@ package obj_storage
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/minio/minio-go/v7"
@@ -49,4 +51,22 @@ func FormatBucketName(name string) string {
 	bucket := strings.ReplaceAll(name, " ", "-")
 	bucket = strings.ToLower(bucket)
 	return bucket
+}
+
+func FormatObjectName(bucketName string, objectName string) string {
+	ext := filepath.Ext(objectName)
+	clearName := strings.TrimSuffix(objectName, ext)
+
+	count := 1
+	for {
+		_, err := MinioClient.StatObject(context.Background(), bucketName, objectName, minio.StatObjectOptions{})
+		if err != nil {
+			if minio.ToErrorResponse(err).Code == "NoSuchKey" {
+				return objectName
+			}
+			return ""
+		}
+		objectName = fmt.Sprintf("%s(%d)%s", clearName, count, ext)
+		count++
+	}
 }
