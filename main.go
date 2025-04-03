@@ -59,6 +59,8 @@ func main() {
 	mux.HandleFunc("POST /courses/course_materials/upload/", handlers.POSTCourseMaterialsHandler)
 	mux.HandleFunc("DELETE /courses/course_materials/", handlers.DELETECourseMaterialsHandler)
 
+	mux.HandleFunc("POST /users/user_photos/upload/", handlers.POSTUserPhotoHandler)
+
 	// Start server
 	log.Println("Server is running on port 8080")
 	err = http.ListenAndServe(":8080", mux)

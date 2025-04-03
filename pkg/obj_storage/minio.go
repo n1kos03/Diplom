@@ -47,8 +47,15 @@ func CreateBucketIfNotExists(client *minio.Client, bucketName string) error {
 	return nil
 }
 
-func FormatBucketName(name string) string {
-	bucket := strings.ReplaceAll(name, " ", "-")
+func FormatBucketName(name string, prefixDef int) string {
+	var prefixName string
+	if prefixDef == 0 {
+		prefixName = "course-materials"
+	} else if prefixDef == 1 {
+		prefixName = "user-photos"
+	}
+	bucket := fmt.Sprintf("%s-%s", prefixName, name)
+	bucket = strings.ReplaceAll(bucket, " ", "-")
 	bucket = strings.ToLower(bucket)
 	return bucket
 }
@@ -57,8 +64,7 @@ func FormatObjectName(bucketName string, objectName string) string {
 	ext := filepath.Ext(objectName)
 	clearName := strings.TrimSuffix(objectName, ext)
 
-	count := 1
-	for {
+	for count := 1; ; count++ {
 		_, err := MinioClient.StatObject(context.Background(), bucketName, objectName, minio.StatObjectOptions{})
 		if err != nil {
 			if minio.ToErrorResponse(err).Code == "NoSuchKey" {
@@ -67,6 +73,5 @@ func FormatObjectName(bucketName string, objectName string) string {
 			return ""
 		}
 		objectName = fmt.Sprintf("%s(%d)%s", clearName, count, ext)
-		count++
 	}
 }

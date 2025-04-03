@@ -84,7 +84,7 @@ func POSTCourseMaterialsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	bucketName := objStor.FormatBucketName(courseName)
+	bucketName := objStor.FormatBucketName(courseName, 0)
 
 	err = objStor.CreateBucketIfNotExists(objStor.MinioClient, bucketName)
 	if err != nil {
@@ -101,9 +101,9 @@ func POSTCourseMaterialsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fileURL := fmt.Sprintf("http://localhost:9000/%s/%s", bucketName, uploadInfo.Key)
+	log.Println("File uploaded successfully. Location: ", uploadInfo.Location)
 
-	log.Println("File uploaded successfully:", fileURL)
+	fileURL := fmt.Sprintf("http://localhost:9000/%s/%s", bucketName, uploadInfo.Key)
 
 	_, err = database.DB.Exec(`INSERT INTO "Course_materials" ("Course_id", "Content_URL", "Description") VALUES ($1, $2, $3)`, courseID, fileURL, description)
 	if err != nil {
