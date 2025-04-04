@@ -2,16 +2,70 @@ package handlers
 
 import (
 	"Diplom/pkg/database"
+	"Diplom/pkg/models"
 	objStor "Diplom/pkg/obj_storage"
 	"context"
 	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"strconv"
+	"strings"
 
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/minio/minio-go/v7"
 )
+
+func GETUserPhotoHandler(w http.ResponseWriter, r *http.Request) {
+	authString := r.Header.Get("Authorization")
+
+	if authString == "" {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	tokenString := strings.TrimPrefix(authString, "Bearer ")
+
+	claims := jwt.MapClaims{}
+	token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
+		return []byte(os.Getenv("JWT_SECRET")), nil
+	})
+	if err !=nil || !token.Valid {
+		http.Error(w, "Invalid token", http.StatusUnauthorized)
+		return
+	}
+
+	rows, err := database.DB.Query(`SELECT * FROM "User_photos" WHERE "User_id" = $1`, claims["id"])
+	if err != nil {
+		http.Error(w, "Server error", http.StatusInternalServerError)
+		return
+	}
+
+	var userPhotos []models.UserPhoto
+
+	for rows.Next() {
+		var userPhoto models.UserPhoto
+
+		err := rows.Scan(&userPhoto.ID, &userPhoto.UserID, &userPhoto.ContentURL, &userPhoto.UploadedAt)
+		if err != nil {
+			http.Error(w, "Error scanning data", http.StatusInternalServerError)
+			return
+		}
+
+		userPhotos = append(userPhotos, userPhoto)
+	}
+
+	if err = rows.Err(); err != nil {
+		http.Error(w, "Error iterating over rows", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+
+	json.NewEncoder(w).Encode(userPhotos)
+}
 
 func POSTUserPhotoHandler(w http.ResponseWriter, r *http.Request) {
 	err := r.ParseMultipartForm(50 << 20)
@@ -76,5 +130,45 @@ func POSTUserPhotoHandler(w http.ResponseWriter, r *http.Request) {
 		"message": "file uploaded",
 		"user_id": userID,
 		"content_url": fileURL,
+	})
+}
+
+func DELETEUserPhotoHandler(w http.ResponseWriter, r *http.Request) {
+	photoID, err := strconv.Atoi(r.FormValue("id"))
+	if err != nil {
+		http.Error(w, "Error converting photo ID to int", http.StatusInternalServerError)
+		return
+	}
+
+	var contentURL string
+	err = database.DB.QueryRow(`SELECT "Content_url" FROM "User_photos" WHERE "id" = $1`, photoID).Scan(&contentURL)
+	if err != nil {
+		http.Error(w, "Error getting data while deleting", http.StatusInternalServerError)
+		log.Println("Error getting data while deleting: ", err)
+		return
+	}
+
+	contentURLNamesPart := strings.TrimPrefix(contentURL, "http://localhost:9000/")
+
+	bucketNameObjectName := strings.Split(contentURLNamesPart, "/")
+
+	err = objStor.MinioClient.RemoveObject(context.Background(), bucketNameObjectName[0], bucketNameObjectName[1], minio.RemoveObjectOptions{})
+	if err != nil {
+		http.Error(w, "Error removing object", http.StatusInternalServerError)
+		return
+	}
+
+	_, err = database.DB.Exec(`DELETE FROM "User_photos" WHERE "id" = $1`, photoID)
+	if err != nil {
+		http.Error(w, "Error deleting data", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"message": "Photo deleted successfully",
+		"id": photoID,
+		"content_url": contentURL,
 	})
 }

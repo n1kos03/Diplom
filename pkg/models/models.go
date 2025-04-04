@@ -26,3 +26,10 @@ type CourseMaterials struct {
 	Description string `json:"description"`
 	CreatedAt time.Time `json:"created_at"`
 }
+
+type UserPhoto struct{
+	ID int `json:"id"`
+	UserID int `json:"user_id"`
+	ContentURL string `json:"content_url"`
+	UploadedAt time.Time `json:"uploaded_at"`
+}
