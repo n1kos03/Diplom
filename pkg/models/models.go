@@ -33,3 +33,9 @@ type UserPhoto struct{
 	ContentURL string `json:"content_url"`
 	UploadedAt time.Time `json:"uploaded_at"`
 }
+
+type Subscription struct {
+	CourseID int `json:"course_id"`
+	UserID int `json:"user_id"`
+	CreatedAt time.Time `json:"created_at"`
+}
