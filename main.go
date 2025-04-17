@@ -10,6 +10,7 @@ import (
 	objStor "Diplom/pkg/obj_storage"
 
 	"github.com/joho/godotenv"
+	"github.com/rs/cors"
 )
 
 func main() {
@@ -42,7 +43,8 @@ func main() {
 	mux := http.NewServeMux()
 	
 	// Handle requests
-	mux.HandleFunc("/", auth.AuthMiddleware(handlers.MainRoute))
+	// mux.HandleFunc("/", auth.AuthMiddleware(handlers.MainRoute))
+	// mux.HandleFunc("/", handlers.MainRoute)
 
 	mux.HandleFunc("POST /login/", auth.LoginHandler)
 
@@ -67,9 +69,16 @@ func main() {
 	mux.HandleFunc("POST /subscriptions/", handlers.POSTSubscriptionHandler)
 	mux.HandleFunc("DELETE /subscriptions/", handlers.DELETESubscriptionHandler)
 
+	handler := cors.New(cors.Options{
+		AllowedOrigins: []string{"http://localhost:5173"},
+		AllowCredentials: true,
+		AllowedHeaders: []string{"Authorization", "Content-Type"},
+		AllowedMethods: []string{"GET", "POST", "PUT", "DELETE"},
+	}).Handler(mux)
+
 	// Start server
 	log.Println("Server is running on port 8080")
-	err = http.ListenAndServe(":8080", mux)
+	err = http.ListenAndServe(":8080", handler)
 	if err != nil {
 		log.Fatal("Error starting server: ", err)
 	}
