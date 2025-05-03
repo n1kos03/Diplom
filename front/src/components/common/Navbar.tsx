@@ -94,7 +94,7 @@ const Navbar: React.FC<NavbarProps> = ({ onSearch }) => {
               </Link>
               <Link
                 to="/users/register/"
-                className="text-indigo-600 hover:text-indigo-700 text-white px-3 py-2 rounded-md transition duration-300"
+                className="text-indigo-600 hover:text-indigo-800 px-3 py-2"
               >
                 Register
               </Link>
