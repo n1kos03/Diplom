@@ -56,10 +56,10 @@ export interface AuthContextType extends AuthState {
 }
 
 export interface RegisterData {
-  name: string;
+  nickname: string;
   email: string;
   password: string;
-  // bio?: string;
+  bio?: string;
 }
 
 export interface LoginData {
