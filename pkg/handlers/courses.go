@@ -30,9 +30,9 @@ func GETCoursesHandler (w http.ResponseWriter, r *http.Request) {
 }
 
 func GETCourses(w http.ResponseWriter, r *http.Request) {
-	rows, err := database.DB.Query(`SELECT * FROM "Course" ORDER BY "ID" ASC`)
+	rows, err := database.DB.Query(`SELECT c.*, u."Nickname" FROM "Course" AS c JOIN "User" AS u ON c."Author_id" = u."ID" ORDER BY c."ID" ASC`)
 	if err != nil {
-		log.Println("Error getting users: ", err)
+		log.Println("Error getting courses: ", err)
 		http.Error(w, "Server error", http.StatusInternalServerError)
 		return
 	}
@@ -42,7 +42,7 @@ func GETCourses(w http.ResponseWriter, r *http.Request) {
 	for rows.Next() {
 		var course models.Course
 
-		err := rows.Scan(&course.ID, &course.AuthorID, &course.Title, &course.Description, &course.CreatedAt)
+		err := rows.Scan(&course.ID, &course.AuthorID, &course.Title, &course.Description, &course.CreatedAt, &course.AuthorName)
 		if err != nil {
 			log.Println("Error scaning row: ", err)
 			http.Error(w, "Error scaning data", http.StatusInternalServerError)
@@ -58,7 +58,7 @@ func GETCourses(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("COntent-Type", "application/json")
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 
 	j, err := json.Marshal(courses)
@@ -78,7 +78,7 @@ func GETCourseByID(w http.ResponseWriter, idStr string) {
 		return
 	}
 
-	query := `SELECT * FROM "Course" WHERE "ID" = $1`
+	query := `SELECT c.*, u."Nickname" FROM "Course" AS c JOIN "User" AS u ON c."Author_id" = u."ID" WHERE c."ID" = $1`
 
 	row, err := database.DB.Query(query, id)
 	if err != nil {
@@ -90,7 +90,7 @@ func GETCourseByID(w http.ResponseWriter, idStr string) {
 	var course models.Course
 
 	if row.Next() {
-		err = row.Scan(&course.ID, &course.AuthorID, &course.Title, &course.Description, &course.CreatedAt)
+		err = row.Scan(&course.ID, &course.AuthorID, &course.Title, &course.Description, &course.CreatedAt, &course.AuthorName)
 		if err != nil {
 			log.Println("Error scanning row: ", err)
 			http.Error(w, "Error scanning data", http.StatusInternalServerError)
@@ -105,7 +105,7 @@ func GETCourseByID(w http.ResponseWriter, idStr string) {
 }
 
 func GETCourseByTitle(w http.ResponseWriter, title string) {
-	query := `SELECT * FROM "Course" WHERE "Title" = $1`
+	query := `SELECT c.*, u."Nickname" FROM "Course" AS c JOIN "User" AS u ON c."Author_id" = u."ID" WHERE c."Title" = $1`
 
 	rows, err := database.DB.Query(query, title)
 	if err != nil {
@@ -119,7 +119,7 @@ func GETCourseByTitle(w http.ResponseWriter, title string) {
 	for rows.Next() {
 		var course models.Course
 
-		err := rows.Scan(&course.ID, &course.AuthorID, &course.Title, &course.Description, &course.CreatedAt)
+		err := rows.Scan(&course.ID, &course.AuthorID, &course.Title, &course.Description, &course.CreatedAt, &course.AuthorName)
 		if err != nil {
 			log.Println("Error scaning row: ", err)
 			http.Error(w, "Error scaning data", http.StatusInternalServerError)
@@ -129,7 +129,7 @@ func GETCourseByTitle(w http.ResponseWriter, title string) {
 		courses = append(courses, course)
 	}
 
-	w.Header().Set("COntent-Type", "application/json")
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 
 	json.NewEncoder(w).Encode(courses)

@@ -15,10 +15,27 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-func generateToken(email string, id int) (string, error) {
+// First variant
+// func generateToken(email string, id int) (string, error) {
+// 	claims := jwt.MapClaims{
+// 		"id":    id,
+// 		"email": email,
+// 		"exp":   time.Now().Add(time.Minute * 15).Unix(),
+// 	}
+// 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+// 	return token.SignedString([]byte(os.Getenv("JWT_SECRET")))
+// }
+
+// Second variant
+func generateToken(user models.User) (string, error) {
 	claims := jwt.MapClaims{
-		"id":    id,
-		"email": email,
+		"user":  map[string]interface{}{
+			"id": user.ID,
+			"nickname": user.Nickname,
+			"email": user.Email,
+			"bio": user.Bio,
+			"created_at": user.CreatedAt,
+		},
 		"exp":   time.Now().Add(time.Minute * 15).Unix(),
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
@@ -39,9 +56,10 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var hashedPassword string
-	var id int
-	err = database.DB.QueryRow(`SELECT "ID", "Password" FROM "User" WHERE "Email" = $1`, user.Email).Scan(&id, &hashedPassword)
+	// var id int
+	err = database.DB.QueryRow(`SELECT "ID", "Password", "Nickname", "Bio", "Created_at" FROM "User" WHERE "Email" = $1`, user.Email).Scan(&user.ID, &hashedPassword, &user.Nickname, &user.Bio, &user.CreatedAt)
 	if err != nil {
+		log.Println(err, "Error while getting data from DB")
 		http.Error(w, "Server error", http.StatusInternalServerError)
 		return
 	}
@@ -52,7 +70,8 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	token, err := generateToken(user.Email, id)
+	// token, err := generateToken(user.Email, id)
+	token, err := generateToken(user)
 	if err != nil {
 		http.Error(w, "Server error", http.StatusInternalServerError)
 		return
@@ -61,6 +80,13 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"token": token,
+		"user":  map[string]interface{}{
+			"id": user.ID,
+			"nickname": user.Nickname,
+			"email": user.Email,
+			"bio": user.Bio,
+			"created_at": user.CreatedAt,
+		},
 	})
 }
 

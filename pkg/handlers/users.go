@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -157,7 +158,7 @@ func  POSTRegisterUser(w http.ResponseWriter, r *http.Request) {
 	var userID int
 
 	err = database.DB.QueryRow(`SELECT "ID" FROM "User" WHERE "Email" = $1`, user.Email).Scan(&userID)
-	if err != nil {
+	if err != nil && err != sql.ErrNoRows {
 		log.Println("Error getting user ID: ", err)
 		http.Error(w, "Server error", http.StatusInternalServerError)
 		return

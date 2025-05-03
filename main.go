@@ -70,10 +70,11 @@ func main() {
 	mux.HandleFunc("DELETE /subscriptions/", handlers.DELETESubscriptionHandler)
 
 	handler := cors.New(cors.Options{
-		AllowedOrigins: []string{"http://localhost:5173"},
+		AllowedOrigins: []string{"http://localhost:5173", "http://127.0.0.1:5173"},
 		AllowCredentials: true,
-		AllowedHeaders: []string{"Authorization", "Content-Type"},
-		AllowedMethods: []string{"GET", "POST", "PUT", "DELETE"},
+		AllowedHeaders: []string{"Authorization", "Content-Type", "text/plain"},
+		AllowedMethods: []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		Debug: true,
 	}).Handler(mux)
 
 	// Start server
