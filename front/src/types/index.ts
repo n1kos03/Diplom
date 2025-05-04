@@ -7,10 +7,10 @@ export interface User {
 }
 
 export interface Photo {
-  id: string;
-  userId: string;
-  url: string;
-  title: string;
+  id: number;
+  userId: number;
+  content_url: string;
+  // title: string;
   createdAt: string;
 }
 

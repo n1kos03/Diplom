@@ -1,11 +1,12 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
-import Login from './pages/Login';
-import Register from './pages/Register';
+import { AuthProvider, useAuth } from './context/AuthContext';
 
 // Pages
 import Home from './pages/Home';
-import { AuthProvider, useAuth } from './context/AuthContext';
+import UserProfile from './pages/UserProfile';
+import Login from './pages/Login';
+import Register from './pages/Register';
 
 //Protected route component
 const ProtectedRoute: React.FC<{
@@ -22,6 +23,10 @@ const ProtectedRoute: React.FC<{
     return <Navigate to="/login/" />;
   }
 
+  if (!requireAuth && isAuthenticated) {
+    return <Navigate to="/" />;
+  }
+
   return <>{children}</>;
 };
 
@@ -30,6 +35,7 @@ const AppRoutes: React.FC = () => {
     <Routes>
       {/* Public routes */}
       <Route path="/" element={<Home />} />
+      <Route path="/users/:id" element={<UserProfile />} /> 
 
       {/*Auth routes (only for non-authenticated users)*/}
       <Route

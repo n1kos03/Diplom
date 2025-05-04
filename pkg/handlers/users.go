@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"Diplom/pkg/database"
 	"Diplom/pkg/models"
@@ -19,15 +20,17 @@ func MainRoute(w http.ResponseWriter, r *http.Request) {
 }
 
 func GETUsersHandler(w http.ResponseWriter, r *http.Request) {
-	URLQuery := r.URL.Query()
-	id := URLQuery.Get("id")
-	nickname := URLQuery.Get("nickname")
+	// URLQuery := r.URL.Query()
+	URLPart := strings.Split(r.URL.Path, "/")
+	// id := URLQuery.Get("id")
+	id := URLPart[len(URLPart)-1]
+	// nickname := URLQuery.Get("nickname")
 
 	switch {
 	case id != "":
 			GETUserByID(w, id)	
-	case nickname != "":
-			GETUserByNickname(w, nickname)
+	// case nickname != "":
+	// 		GETUserByNickname(w, nickname)
 		default:
 			GETUsers(w, r)
 	}

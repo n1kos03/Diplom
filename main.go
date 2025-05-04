@@ -61,7 +61,8 @@ func main() {
 	mux.HandleFunc("POST /courses/course_materials/upload/", handlers.POSTCourseMaterialsHandler)
 	mux.HandleFunc("DELETE /courses/course_materials/", handlers.DELETECourseMaterialsHandler)
 
-	mux.HandleFunc("GET /users/user_photos/", auth.AuthMiddleware(handlers.GETUserPhotoHandler))
+	// mux.HandleFunc("GET /users/user_photos/", auth.AuthMiddleware(handlers.GETUserPhotoHandler))
+	mux.HandleFunc("GET /users/user_photos/", handlers.GETUserPhotoHandler)
 	mux.HandleFunc("POST /users/user_photos/upload/", handlers.POSTUserPhotoHandler)
 	mux.HandleFunc("DELETE /users/user_photos/", handlers.DELETEUserPhotoHandler)
 
