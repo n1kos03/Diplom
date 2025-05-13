@@ -178,10 +178,10 @@ func  POSTRegisterUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	query := `INSERT INTO "User" ("Nickname", "Email", "Password") VALUES ($1, $2, $3) RETURNING "ID"`
+	query := `INSERT INTO "User" ("Nickname", "Email", "Password", "Bio") VALUES ($1, $2, $3, $4) RETURNING "ID"`
 	
 	// var userID int
-	err = database.DB.QueryRow(query, user.Nickname, user.Email, string(hashedPassword)).Scan(&userID)
+	err = database.DB.QueryRow(query, user.Nickname, user.Email, string(hashedPassword), user.Bio).Scan(&userID)
 	if err != nil {
 		log.Println("Error inserting user: ", err)
 		http.Error(w, "Server error", http.StatusInternalServerError)

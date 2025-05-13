@@ -41,10 +41,6 @@ func main() {
 
 	// Allocate a new mux router to route requests
 	mux := http.NewServeMux()
-	
-	// Handle requests
-	// mux.HandleFunc("/", auth.AuthMiddleware(handlers.MainRoute))
-	// mux.HandleFunc("/", handlers.MainRoute)
 
 	mux.HandleFunc("POST /login/", auth.LoginHandler)
 
@@ -53,13 +49,13 @@ func main() {
 	mux.HandleFunc("PUT /users/", handlers.PUTUser)
 	mux.HandleFunc("DELETE /users/", handlers.DELETEUserHandler)
 
-	mux.HandleFunc("GET /courses/", handlers.GETCoursesHandler)
-	mux.HandleFunc("POST /courses/course_creation/", auth.AuthMiddleware(handlers.POSTCourseHandler))
+	mux.HandleFunc("GET /courses/{id}", handlers.GETCoursesHandler)
+	mux.HandleFunc("POST /course-creation/", handlers.POSTCourseHandler)
 	mux.HandleFunc("PUT /courses/", handlers.PUTCOurse)
 
-	mux.HandleFunc("GET /courses/course_materials/", handlers.GETCourseMaterialsHandler)
-	mux.HandleFunc("POST /courses/course_materials/upload/", handlers.POSTCourseMaterialsHandler)
-	mux.HandleFunc("DELETE /courses/course_materials/", handlers.DELETECourseMaterialsHandler)
+	mux.HandleFunc("GET /courses/{id}/materials/", handlers.GETCourseMaterialsHandler)
+	mux.HandleFunc("POST /courses/{id}/materials/upload/", handlers.POSTCourseMaterialsHandler)
+	mux.HandleFunc("DELETE /courses/materials/", handlers.DELETECourseMaterialsHandler)
 
 	// mux.HandleFunc("GET /users/user_photos/", auth.AuthMiddleware(handlers.GETUserPhotoHandler))
 	mux.HandleFunc("GET /users/user_photos/", handlers.GETUserPhotoHandler)
@@ -69,6 +65,10 @@ func main() {
 	mux.HandleFunc("GET /subscriptions/", handlers.GETSubscriptionsHandler)
 	mux.HandleFunc("POST /subscriptions/", handlers.POSTSubscriptionHandler)
 	mux.HandleFunc("DELETE /subscriptions/", handlers.DELETESubscriptionHandler)
+
+	mux.HandleFunc("GET /courses/comments/{id}", handlers.GETCommentsHandler)
+	mux.HandleFunc("POST /courses/comments/{id}", handlers.POSTCommentHandler)
+	mux.HandleFunc("DELETE /courses/comments/", handlers.DELETECommentHandler)
 
 	handler := cors.New(cors.Options{
 		AllowedOrigins: []string{"http://localhost:5173", "http://127.0.0.1:5173"},

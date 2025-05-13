@@ -15,15 +15,18 @@ import (
 )
 
 func GETCoursesHandler (w http.ResponseWriter, r *http.Request) {
-	URLQuery := r.URL.Query()
-	id := URLQuery.Get("id")
-	title := URLQuery.Get("title")
+	// URLQuery := r.URL.Query()
+	// id := URLQuery.Get("id")
+	// title := URLQuery.Get("title")
+	
+	URLPart := strings.Split(r.URL.Path, "/")
+	id := URLPart[len(URLPart)-1]
 
 	switch {
 	case id != "":
 		GETCourseByID(w, id)
-	case title != "":
-		GETCourseByTitle(w, title)
+	// case title != "":
+	// 	GETCourseByTitle(w, title)
 	default:
 		GETCourses(w, r)
 	}
@@ -169,7 +172,7 @@ func POSTCourseHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	
-	err = database.DB.QueryRow(`INSERT INTO "Course" ("Author_id", "Title", "Description") VALUES ($1, $2, $3) RETURNING "ID"`, claims["id"], course.Title, course.Description).Scan(&course.ID)
+	err = database.DB.QueryRow(`INSERT INTO "Course" ("Author_id", "Title", "Description") VALUES ($1, $2, $3) RETURNING "ID"`, claims["user"].(map[string]interface{})["id"], course.Title, course.Description).Scan(&course.ID)
 	if err != nil {
 		log.Println("Error inserting course: ", err)
 		http.Error(w, "Server error", http.StatusInternalServerError)

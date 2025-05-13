@@ -17,7 +17,10 @@ import (
 )
 
 func GETCourseMaterialsHandler(w http.ResponseWriter, r *http.Request) {
-	courseID, err := strconv.Atoi(r.FormValue("course_id"))
+	URLPart := strings.Split(r.URL.Path, "/")
+	id := URLPart[2]
+
+	courseID, err := strconv.Atoi(id)
 	if err != nil {
 		http.Error(w, "Error converting course ID to int", http.StatusInternalServerError)
 		return

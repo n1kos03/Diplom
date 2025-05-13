@@ -4,6 +4,7 @@ import (
 	"Diplom/pkg/database"
 	"Diplom/pkg/models"
 	"encoding/json"
+	"log"
 	"net/http"
 	"strconv"
 )
@@ -42,12 +43,14 @@ func GETSubscriptionsHandler( w http.ResponseWriter, r *http.Request) {
 func POSTSubscriptionHandler(w http.ResponseWriter, r *http.Request) {
 	userID, err := strconv.Atoi(r.FormValue("user_id"))
 	if err != nil {
+		log.Println("Error converting user ID to int: ", err)
 		http.Error(w, "Error converting user ID to int", http.StatusInternalServerError)
 		return
 	}
 
 	courseID, err := strconv.Atoi(r.FormValue("course_id"))
 	if err != nil {
+		log.Println("Error converting user ID to int: ", err)
 		http.Error(w, "Error converting course ID to int", http.StatusInternalServerError)
 		return
 	}
