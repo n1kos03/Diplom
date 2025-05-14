@@ -9,33 +9,14 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"strconv"
 	"strings"
 
+	"github.com/julienschmidt/httprouter"
 	"github.com/minio/minio-go/v7"
 )
 
-func GETUserPhotoHandler(w http.ResponseWriter, r *http.Request) {
-	// authString := r.Header.Get("Authorization")
-
-	// if authString == "" {
-	// 	http.Error(w, "Unauthorized", http.StatusUnauthorized)
-	// 	return
-	// }
-
-	// tokenString := strings.TrimPrefix(authString, "Bearer ")
-
-	// claims := jwt.MapClaims{}
-	// token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
-	// 	return []byte(os.Getenv("JWT_SECRET")), nil
-	// })
-	// if err !=nil || !token.Valid {
-	// 	http.Error(w, "Invalid token", http.StatusUnauthorized)
-	// 	return
-	// }
-
-	URLPart := strings.Split(r.URL.Path, "/")
-	id := URLPart[len(URLPart)-1]
+func GETUserPhotoHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	id := ps.ByName("id")
 
 	rows, err := database.DB.Query(`SELECT * FROM "User_photos" WHERE "User_id" = $1`, id)
 	if err != nil {
@@ -68,18 +49,14 @@ func GETUserPhotoHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(userPhotos)
 }
 
-func POSTUserPhotoHandler(w http.ResponseWriter, r *http.Request) {
+func POSTUserPhotoHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	err := r.ParseMultipartForm(50 << 20)
 	if err != nil {
 		http.Error(w, "File too large", http.StatusInternalServerError)
 		return
 	}
 
-	userID, err := strconv.Atoi(r.FormValue("user_id"))
-	if err != nil {
-		http.Error(w, "Error converting user ID to int", http.StatusInternalServerError)
-		return
-	}
+	userID := ps.ByName("id")
 
 	file, handler, err := r.FormFile("file")
 	if err != nil {
@@ -134,15 +111,8 @@ func POSTUserPhotoHandler(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func DELETEUserPhotoHandler(w http.ResponseWriter, r *http.Request) {
-	// photoID, err := strconv.Atoi(r.FormValue("id"))
-	// if err != nil {
-	// 	http.Error(w, "Error converting photo ID to int", http.StatusInternalServerError)
-	// 	return
-	// }
-
-	URLPart := strings.Split(r.URL.Path, "/")
-	photoID := URLPart[len(URLPart)-1]
+func DELETEUserPhotoHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	photoID := ps.ByName("id")
 
 	var contentURL string
 	err := database.DB.QueryRow(`SELECT "Content_url" FROM "User_photos" WHERE "id" = $1`, photoID).Scan(&contentURL)

@@ -8,18 +8,21 @@ import (
 	"log"
 	"net/http"
 	"strconv"
-	"strings"
+
+	"github.com/julienschmidt/httprouter"
 )
 
-func GETCommentsHandler(w http.ResponseWriter, r *http.Request) {
-	URLParts := strings.Split(r.URL.Path, "/")
+func GETCommentsHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	// URLParts := strings.Split(r.URL.Path, "/")
 	
-	if URLParts[3] == "" {
-		http.Error(w, "Invalid URL", http.StatusBadRequest)
-		return
-	}
+	// if URLParts[3] == "" {
+	// 	http.Error(w, "Invalid URL", http.StatusBadRequest)
+	// 	return
+	// }
 	
-	rows, err := database.DB.Query(`SELECT * FROM "Comments" WHERE course_id = $1 ORDER BY id ASC`, URLParts[3])
+	courseID := ps.ByName("id")
+
+	rows, err := database.DB.Query(`SELECT * FROM "Comments" WHERE course_id = $1 ORDER BY id ASC`, courseID)
 	if err != nil {
 		http.Error(w, "Error getting data", http.StatusInternalServerError)
 		return
@@ -50,13 +53,11 @@ func GETCommentsHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(comments)
 }
 
-func POSTCommentHandler(w http.ResponseWriter, r *http.Request) {
-	URLParts := strings.Split(r.URL.Path, "/")
-
+func POSTCommentHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	var comment models.Comment
 
 	var err error
-	comment.Course_id, err = strconv.Atoi(URLParts[3])
+	comment.Course_id, err = strconv.Atoi(ps.ByName("id"))
 	if err != nil {
 		http.Error(w, "Error converting course ID to int", http.StatusInternalServerError)
 		return
@@ -106,7 +107,7 @@ func POSTCommentHandler(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func DELETECommentHandler(w http.ResponseWriter, r *http.Request) {
+func DELETECommentHandler(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	commentID, err := strconv.Atoi(r.URL.Query().Get("id"))
 	if err != nil {
 		http.Error(w, "Error converting data to int", http.StatusInternalServerError)

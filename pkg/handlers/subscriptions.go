@@ -1,15 +1,18 @@
 package handlers
 
 import (
+	"Diplom/pkg/auth"
 	"Diplom/pkg/database"
 	"Diplom/pkg/models"
 	"encoding/json"
 	"log"
 	"net/http"
 	"strconv"
+
+	"github.com/julienschmidt/httprouter"
 )
 
-func GETSubscriptionsHandler( w http.ResponseWriter, r *http.Request) {
+func GETSubscriptionsHandler( w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	rows, err := database.DB.Query(`SELECT * FROM "Subscriptions" ORDER BY "User_id" ASC`)
 	if err != nil {
 		http.Error(w, "Error getting data", http.StatusInternalServerError)
@@ -40,13 +43,22 @@ func GETSubscriptionsHandler( w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(subscriptions)
 }
 
-func POSTSubscriptionHandler(w http.ResponseWriter, r *http.Request) {
-	userID, err := strconv.Atoi(r.FormValue("user_id"))
-	if err != nil {
-		log.Println("Error converting user ID to int: ", err)
-		http.Error(w, "Error converting user ID to int", http.StatusInternalServerError)
+func POSTSubscriptionHandler(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Invalid method", http.StatusMethodNotAllowed)
 		return
 	}
+	
+	claims, err := auth.GetTokenClaimsFromRequest(r)
+	if err != nil || claims == nil {
+		http.Error(w, "Error getting claims", http.StatusUnauthorized)
+		log.Println("Error getting claims: ", err)
+		return
+	}
+	
+	userIDRow := claims["user"].(map[string]interface{})["id"].(float64)
+
+	userID := int(userIDRow)
 
 	courseID, err := strconv.Atoi(r.FormValue("course_id"))
 	if err != nil {
@@ -70,12 +82,22 @@ func POSTSubscriptionHandler(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func DELETESubscriptionHandler(w http.ResponseWriter, r *http.Request) {
-	userID, err := strconv.Atoi(r.FormValue("user_id"))
-	if err != nil {
-		http.Error(w, "Error converting data to int", http.StatusInternalServerError)
+func DELETESubscriptionHandler(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	if r.Method != http.MethodDelete {
+		http.Error(w, "Invalid method", http.StatusMethodNotAllowed)
 		return
 	}
+	
+	claims, err := auth.GetTokenClaimsFromRequest(r)
+	if err != nil || claims == nil {
+		http.Error(w, "Error getting claims", http.StatusUnauthorized)
+		log.Println("Error getting claims: ", err)
+		return
+	}
+	
+	userIDRow := claims["user"].(map[string]interface{})["id"].(float64)
+
+	userID := int(userIDRow)
 	
 	courseID, err := strconv.Atoi(r.FormValue("course_id"))
 	if err != nil {

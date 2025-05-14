@@ -40,3 +40,11 @@ type Subscription struct {
 	UserID int `json:"user_id"`
 	CreatedAt time.Time `json:"created_at"`
 }
+
+type Comment struct {
+	ID int `json:"id"`
+	Course_id int `json:"course_id"`
+	User_id int `json:"user_id"`
+	Content string `json:"content"`
+	CreatedAt time.Time `json:"created_at"`
+}

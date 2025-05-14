@@ -13,18 +13,12 @@ import (
 	"Diplom/pkg/models"
 	objStor "Diplom/pkg/obj_storage"
 
+	"github.com/julienschmidt/httprouter"
 	"github.com/minio/minio-go/v7"
 )
 
-func GETCourseMaterialsHandler(w http.ResponseWriter, r *http.Request) {
-	URLPart := strings.Split(r.URL.Path, "/")
-	id := URLPart[2]
-
-	courseID, err := strconv.Atoi(id)
-	if err != nil {
-		http.Error(w, "Error converting course ID to int", http.StatusInternalServerError)
-		return
-	}
+func GETCourseMaterialsHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	courseID := ps.ByName("id")
 
 	query := `SELECT * FROM "Course_materials" WHERE "Course_id" = $1`
 
@@ -58,7 +52,7 @@ func GETCourseMaterialsHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(materials)
 }
 
-func POSTCourseMaterialsHandler(w http.ResponseWriter, r *http.Request) {
+func POSTCourseMaterialsHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	err := r.ParseMultipartForm(500 << 20)
 	if err != nil {
 		http.Error(w, "File too large", http.StatusRequestEntityTooLarge)
@@ -66,7 +60,7 @@ func POSTCourseMaterialsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Take parameters and file
-	courseID, err :=  strconv.Atoi(r.FormValue("course_id"))
+	courseID, err :=  strconv.Atoi(ps.ByName("id"))
 	if err != nil {
 		http.Error(w, "Error converting course ID to int", http.StatusInternalServerError)
 		return
@@ -122,7 +116,7 @@ func POSTCourseMaterialsHandler(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func DELETECourseMaterialsHandler(w http.ResponseWriter, r *http.Request) {
+func DELETECourseMaterialsHandler(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	materialID, err := strconv.Atoi(r.FormValue("id"))
 	if err != nil {
 		http.Error(w, "Error converting course ID to int", http.StatusInternalServerError)

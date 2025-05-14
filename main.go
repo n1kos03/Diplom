@@ -10,6 +10,7 @@ import (
 	objStor "Diplom/pkg/obj_storage"
 
 	"github.com/joho/godotenv"
+	"github.com/julienschmidt/httprouter"
 	"github.com/rs/cors"
 )
 
@@ -40,35 +41,38 @@ func main() {
 	objStor.InitMinioClient()
 
 	// Allocate a new mux router to route requests
-	mux := http.NewServeMux()
+	// mux := http.NewServeMux()
 
-	mux.HandleFunc("POST /login/", auth.LoginHandler)
+	router := httprouter.New()
 
-	mux.HandleFunc("GET /users/", handlers.GETUsersHandler)
-	mux.HandleFunc("POST /users/register/", handlers.POSTRegisterUser)
-	mux.HandleFunc("PUT /users/", handlers.PUTUser)
-	mux.HandleFunc("DELETE /users/", handlers.DELETEUserHandler)
+	router.POST("/login/", auth.LoginHandler)
 
-	mux.HandleFunc("GET /courses/{id}", handlers.GETCoursesHandler)
-	mux.HandleFunc("POST /course-creation/", handlers.POSTCourseHandler)
-	mux.HandleFunc("PUT /courses/", handlers.PUTCOurse)
+	router.GET("/courses/:id/comments/", handlers.GETCommentsHandler)
+	router.POST("/courses/:id/comments/", handlers.POSTCommentHandler)
+	router.DELETE("/courses/:id/comments/", handlers.DELETECommentHandler)
 
-	mux.HandleFunc("GET /courses/{id}/materials/", handlers.GETCourseMaterialsHandler)
-	mux.HandleFunc("POST /courses/{id}/materials/upload/", handlers.POSTCourseMaterialsHandler)
-	mux.HandleFunc("DELETE /courses/materials/", handlers.DELETECourseMaterialsHandler)
+	router.GET("/courses/:id/materials/", handlers.GETCourseMaterialsHandler)
+	router.POST("/courses/:id/materials-upload/", handlers.POSTCourseMaterialsHandler)
+	router.DELETE("/courses/:id/materials/", handlers.DELETECourseMaterialsHandler)
 
-	// mux.HandleFunc("GET /users/user_photos/", auth.AuthMiddleware(handlers.GETUserPhotoHandler))
-	mux.HandleFunc("GET /users/user_photos/", handlers.GETUserPhotoHandler)
-	mux.HandleFunc("POST /users/user_photos/upload/", handlers.POSTUserPhotoHandler)
-	mux.HandleFunc("DELETE /users/user_photos/", handlers.DELETEUserPhotoHandler)
+	router.GET("/courses/", handlers.GETCoursesHandler)
+	router.GET("/courses/:id/", handlers.GETCourseByID)
+	router.POST("/course-creation/", handlers.POSTCourseHandler)
+	router.PUT("/courses/:id/", handlers.PUTCourse)
+	
+	router.GET("/subscriptions/", handlers.GETSubscriptionsHandler)
+	router.POST("/subscriptions/", handlers.POSTSubscriptionHandler)
+	router.DELETE("/subscriptions/", handlers.DELETESubscriptionHandler)
 
-	mux.HandleFunc("GET /subscriptions/", handlers.GETSubscriptionsHandler)
-	mux.HandleFunc("POST /subscriptions/", handlers.POSTSubscriptionHandler)
-	mux.HandleFunc("DELETE /subscriptions/", handlers.DELETESubscriptionHandler)
+	router.GET("/users/", handlers.GETUsersHandler)
+	router.GET("/users/:id/", handlers.GETUserByID)
+	router.POST("/users/registration/", handlers.POSTRegisterUser)
+	router.PUT("/users/:id/", handlers.PUTUser)
+	router.DELETE("/users/:id/", handlers.DELETEUserHandler)
 
-	mux.HandleFunc("GET /courses/comments/{id}", handlers.GETCommentsHandler)
-	mux.HandleFunc("POST /courses/comments/{id}", handlers.POSTCommentHandler)
-	mux.HandleFunc("DELETE /courses/comments/", handlers.DELETECommentHandler)
+	router.GET("/users/:id/user_photos/", handlers.GETUserPhotoHandler)
+	router.POST("/users/user_photos/:id/upload/", handlers.POSTUserPhotoHandler)
+	router.DELETE("/users/:id/user_photos/", handlers.DELETEUserPhotoHandler)
 
 	handler := cors.New(cors.Options{
 		AllowedOrigins: []string{"http://localhost:5173", "http://127.0.0.1:5173"},
@@ -76,7 +80,7 @@ func main() {
 		AllowedHeaders: []string{"Authorization", "Content-Type", "text/plain"},
 		AllowedMethods: []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		Debug: true,
-	}).Handler(mux)
+	}).Handler(router)
 
 	// Start server
 	log.Println("Server is running on port 8080")

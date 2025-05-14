@@ -6,12 +6,11 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"strconv"
-	"strings"
 
 	"Diplom/pkg/database"
 	"Diplom/pkg/models"
 
+	"github.com/julienschmidt/httprouter"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -19,18 +18,13 @@ func MainRoute(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "There would be main page of web site")
 }
 
-func GETUsersHandler(w http.ResponseWriter, r *http.Request) {
-	// URLQuery := r.URL.Query()
-	URLPart := strings.Split(r.URL.Path, "/")
-	// id := URLQuery.Get("id")
-	id := URLPart[len(URLPart)-1]
-	// nickname := URLQuery.Get("nickname")
+func GETUsersHandler(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	URLQuery := r.URL.Query()
+	nickname := URLQuery.Get("nickname")
 
-	switch {
-	case id != "":
-			GETUserByID(w, id)	
-	// case nickname != "":
-	// 		GETUserByNickname(w, nickname)
+	switch {	
+	case nickname != "":
+			GETUserByNickname(w, nickname)
 		default:
 			GETUsers(w, r)
 	}
@@ -78,13 +72,8 @@ func GETUsers(w http.ResponseWriter, r *http.Request) {
 	w.Write(j)
 }
 
-func GETUserByID(w http.ResponseWriter, idStr string) {
-	id, err := strconv.Atoi(idStr)
-	if err != nil {
-		log.Println("Error converting ID to int: ", err)
-		http.Error(w, "Invalid ID", http.StatusBadRequest)
-		return
-	}
+func GETUserByID(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	id := ps.ByName("id")
 
 	query := `SELECT "ID", "Nickname", "Email", "Password", "Bio", "Created_at" FROM "User" WHERE "ID" = $1`
 
@@ -143,7 +132,7 @@ func GETUserByNickname(w http.ResponseWriter, nickname string) {
 	json.NewEncoder(w).Encode(users)
 }
 
-func  POSTRegisterUser(w http.ResponseWriter, r *http.Request) {
+func  POSTRegisterUser(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Invalid method", http.StatusMethodNotAllowed)
 		return
@@ -180,7 +169,6 @@ func  POSTRegisterUser(w http.ResponseWriter, r *http.Request) {
 
 	query := `INSERT INTO "User" ("Nickname", "Email", "Password", "Bio") VALUES ($1, $2, $3, $4) RETURNING "ID"`
 	
-	// var userID int
 	err = database.DB.QueryRow(query, user.Nickname, user.Email, string(hashedPassword), user.Bio).Scan(&userID)
 	if err != nil {
 		log.Println("Error inserting user: ", err)
@@ -196,16 +184,17 @@ func  POSTRegisterUser(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func PUTUser(w http.ResponseWriter, r *http.Request) {
+func PUTUser(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	if r.Method != http.MethodPut {
 		http.Error(w, "Invalid method", http.StatusMethodNotAllowed)
 		return
 	}
 
 	URLQuery := r.URL.Query()
-	id := URLQuery.Get("id")
 	nickname := URLQuery.Get("nickname")
 	bio := URLQuery.Get("bio")
+
+	id := ps.ByName("id")
 
 	if nickname != "" {
 		query := `UPDATE "User" SET "Nickname" = $1 WHERE "ID" = $2`
@@ -244,14 +233,13 @@ func PUTUser(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func DELETEUserHandler(w http.ResponseWriter, r *http.Request) {
+func DELETEUserHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	if r.Method != http.MethodDelete {
 		http.Error(w, "Invalid method", http.StatusMethodNotAllowed)
 		return
 	}
 
-	URLQuery := r.URL.Query()
-	id := URLQuery.Get("id")
+	id := ps.ByName("id")
 
 	_, err := database.DB.Exec(`DELETE FROM "User" WHERE "ID" = $1`, id)
 	if err != nil {

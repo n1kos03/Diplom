@@ -5,34 +5,30 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"strconv"
 	"strings"
 
 	"Diplom/pkg/database"
 	"Diplom/pkg/models"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/julienschmidt/httprouter"
 )
 
-func GETCoursesHandler (w http.ResponseWriter, r *http.Request) {
-	// URLQuery := r.URL.Query()
-	// id := URLQuery.Get("id")
-	// title := URLQuery.Get("title")
+func GETCoursesHandler (w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	URLQuery := r.URL.Query()
+	title := URLQuery.Get("title")
 	
-	URLPart := strings.Split(r.URL.Path, "/")
-	id := URLPart[len(URLPart)-1]
+	id := ps.ByName("id")
 
 	switch {
 	case id != "":
-		GETCourseByID(w, id)
-	// case title != "":
-	// 	GETCourseByTitle(w, title)
-	default:
-		GETCourses(w, r)
+		GETCourseByID(w, r, ps)
+	case title != "":
+		GETCourseByTitle(w, title)
 	}
 }
 
-func GETCourses(w http.ResponseWriter, r *http.Request) {
+func GETCourses(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	rows, err := database.DB.Query(`SELECT c.*, u."Nickname" FROM "Course" AS c JOIN "User" AS u ON c."Author_id" = u."ID" ORDER BY c."ID" ASC`)
 	if err != nil {
 		log.Println("Error getting courses: ", err)
@@ -73,13 +69,8 @@ func GETCourses(w http.ResponseWriter, r *http.Request) {
 	w.Write(j)
 }
 
-func GETCourseByID(w http.ResponseWriter, idStr string) {
-	id, err := strconv.Atoi(idStr)
-	if err != nil {
-		log.Println("Error converting ID to int: ", err)
-		http.Error(w, "Invalid ID", http.StatusBadRequest)
-		return
-	}
+func GETCourseByID(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	id := ps.ByName("id")
 
 	query := `SELECT c.*, u."Nickname" FROM "Course" AS c JOIN "User" AS u ON c."Author_id" = u."ID" WHERE c."ID" = $1`
 
@@ -138,7 +129,7 @@ func GETCourseByTitle(w http.ResponseWriter, title string) {
 	json.NewEncoder(w).Encode(courses)
 }
 
-func POSTCourseHandler(w http.ResponseWriter, r *http.Request) {
+func POSTCourseHandler(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Invalid method", http.StatusMethodNotAllowed)
 		return
@@ -187,14 +178,15 @@ func POSTCourseHandler(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func PUTCOurse(w http.ResponseWriter, r *http.Request) {
+func PUTCourse(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	if r.Method != http.MethodPut {
 		http.Error(w, "Invalid method", http.StatusMethodNotAllowed)
+		log.Println("Invalid method", r.Method)
 		return
 	}
 
 	URLQuery := r.URL.Query()
-	id := URLQuery.Get("id")
+	id := ps.ByName("id")
 	title := URLQuery.Get("title")
 	description := URLQuery.Get("description")
 
