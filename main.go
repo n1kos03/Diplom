@@ -74,6 +74,11 @@ func main() {
 	router.POST("/users/user_photos/:id/upload/", handlers.POSTUserPhotoHandler)
 	router.DELETE("/users/:id/user_photos/", handlers.DELETEUserPhotoHandler)
 
+	router.GET("/courses_rating/", handlers.GETCourseRatingHandler)
+	router.POST("/courses_rating/:id/", handlers.POSTCourseRatingHandler)
+	router.PUT("/courses_rating/:id/", handlers.PUTCourseRatingHandler)
+	router.DELETE("/courses_rating/:id/", handlers.DELETECourseRatingHandler)
+
 	handler := cors.New(cors.Options{
 		AllowedOrigins: []string{"http://localhost:5173", "http://127.0.0.1:5173"},
 		AllowCredentials: true,

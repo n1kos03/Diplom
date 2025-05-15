@@ -17,6 +17,7 @@ type Course struct {
 	AuthorName string `json:"author_name"`
 	Title string `json:"title"`
 	Description string `json:"description"`
+	Rating float64 `json:"rating"`
 	CreatedAt time.Time `json:"created_at"`
 }
 
@@ -46,5 +47,13 @@ type Comment struct {
 	Course_id int `json:"course_id"`
 	User_id int `json:"user_id"`
 	Content string `json:"content"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
+type CourseRating struct {
+	ID int `json:"id"`
+	CourseID int `json:"course_id"`
+	UserID int `json:"user_id"`
+	Rating float64 `json:"rating"`
 	CreatedAt time.Time `json:"created_at"`
 }
