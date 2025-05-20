@@ -52,8 +52,8 @@ func main() {
 	router.DELETE("/courses/:id/comments/", handlers.DELETECommentHandler)
 
 	router.GET("/courses/:id/materials/", handlers.GETCourseMaterialsHandler)
-	router.POST("/courses/:id/materials-upload/", handlers.POSTCourseMaterialsHandler)
-	router.DELETE("/courses/:id/materials/", handlers.DELETECourseMaterialsHandler)
+	router.POST("/courses/:id/materials-upload/:section_id/", handlers.POSTCourseMaterialsHandler)
+	router.DELETE("/courses/:id/materials/:section_id/", handlers.DELETECourseMaterialsHandler)
 
 	router.GET("/courses/", handlers.GETCoursesHandler)
 	router.GET("/courses/:id/", handlers.GETCourseByID)
@@ -78,6 +78,11 @@ func main() {
 	router.POST("/courses_rating/:id/", handlers.POSTCourseRatingHandler)
 	router.PUT("/courses_rating/:id/", handlers.PUTCourseRatingHandler)
 	router.DELETE("/courses_rating/:id/", handlers.DELETECourseRatingHandler)
+
+	router.GET("/sections/:course_id/", handlers.GETSectionHandler)
+	router.POST("/sections/:course_id/", handlers.POSTSectionHandler)
+	router.PUT("/sections/:id/", handlers.PUTSectionHandler)
+	router.DELETE("/sections/:id/", handlers.DELETESectionHandler)
 
 	handler := cors.New(cors.Options{
 		AllowedOrigins: []string{"http://localhost:5173", "http://127.0.0.1:5173"},

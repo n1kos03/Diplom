@@ -33,9 +33,10 @@ func GETCourseMaterialsHandler(w http.ResponseWriter, r *http.Request, ps httpro
 	for rows.Next() {
 		var material models.CourseMaterials
 
-		err := rows.Scan(&material.ID, &material.CourseID, &material.ContentURL, &material.Description, &material.CreatedAt)
+		err := rows.Scan(&material.ID, &material.CourseID, &material.ContentURL, &material.Description, &material.CreatedAt, &material.SectionID)
 		if err != nil {
 			http.Error(w, "Error scanning data", http.StatusInternalServerError)
+			log.Println("Error scanning data: ", err)
 			return
 		}
 
@@ -61,6 +62,11 @@ func POSTCourseMaterialsHandler(w http.ResponseWriter, r *http.Request, ps httpr
 
 	// Take parameters and file
 	courseID, err :=  strconv.Atoi(ps.ByName("id"))
+	if err != nil {
+		http.Error(w, "Error converting course ID to int", http.StatusInternalServerError)
+		return
+	}
+	sectionID, err :=  strconv.Atoi(ps.ByName("section_id"))
 	if err != nil {
 		http.Error(w, "Error converting course ID to int", http.StatusInternalServerError)
 		return
@@ -102,7 +108,7 @@ func POSTCourseMaterialsHandler(w http.ResponseWriter, r *http.Request, ps httpr
 
 	fileURL := fmt.Sprintf("http://localhost:9000/%s/%s", bucketName, uploadInfo.Key)
 
-	_, err = database.DB.Exec(`INSERT INTO "Course_materials" ("Course_id", "Content_URL", "Description") VALUES ($1, $2, $3)`, courseID, fileURL, description)
+	_, err = database.DB.Exec(`INSERT INTO "Course_materials" ("Course_id", "Content_URL", "Description", section_id) VALUES ($1, $2, $3, $4)`, courseID, fileURL, description, sectionID)
 	if err != nil {
 		http.Error(w, "Error inserting data", http.StatusInternalServerError)
 		return
