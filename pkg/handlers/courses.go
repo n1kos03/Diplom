@@ -89,7 +89,7 @@ func GETCourseByID(w http.ResponseWriter, r *http.Request, ps httprouter.Params)
 		}
 	}
 	
-	w.Header().Set("COntent-Type", "application/json")
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 
 	json.NewEncoder(w).Encode(course)

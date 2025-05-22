@@ -82,3 +82,11 @@ type UserAnswer struct {
 	ContentURL string `json:"content_url"`
 	CreatedAt time.Time `json:"created_at"`
 }
+
+type TaskReview struct {
+	ID int `json:"id"`
+	AnswerID int `json:"answer_id"`
+	Grade int `json:"grade"`
+	AuthorComment string `json:"author_comment"`
+	CreatedAt time.Time `json:"created_at"`
+}
