@@ -65,3 +65,12 @@ type Section struct {
 	Title string `json:"title"`
 	Description string `json:"description"`
 }
+
+type CourseTask struct {
+	ID int `json:"id"`
+	CourseID int `json:"course_id"`
+	SectionID int `json:"section_id"`
+	ContentURL string `json:"content_url"`
+	Description string `json:"description"`
+	CreatedAt time.Time `json:"created_at"`
+}
