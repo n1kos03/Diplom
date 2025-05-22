@@ -13,13 +13,6 @@ import (
 )
 
 func GETCommentsHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	// URLParts := strings.Split(r.URL.Path, "/")
-	
-	// if URLParts[3] == "" {
-	// 	http.Error(w, "Invalid URL", http.StatusBadRequest)
-	// 	return
-	// }
-	
 	courseID := ps.ByName("id")
 
 	rows, err := database.DB.Query(`SELECT * FROM "Comments" WHERE course_id = $1 ORDER BY id ASC`, courseID)

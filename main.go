@@ -88,6 +88,10 @@ func main() {
 	router.PUT("/sections/:id/", handlers.PUTSectionHandler)
 	router.DELETE("/sections/:id/", handlers.DELETESectionHandler)
 
+	router.GET("/courses/:id/answers/:task_id/", handlers.GETUserAnswersHandler)
+	router.POST("/courses/:id/answers/:task_id/", handlers.POSTUserAnswerHandler)
+	router.DELETE("/courses/:id/answers/:task_id/", handlers.DELETEUserAnswerHandler)
+
 	handler := cors.New(cors.Options{
 		AllowedOrigins: []string{"http://localhost:5173", "http://127.0.0.1:5173"},
 		AllowCredentials: true,

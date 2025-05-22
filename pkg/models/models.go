@@ -74,3 +74,11 @@ type CourseTask struct {
 	Description string `json:"description"`
 	CreatedAt time.Time `json:"created_at"`
 }
+
+type UserAnswer struct {
+	ID int `json:"id"`
+	TaskID int `json:"task_id"`
+	UserID int `json:"user_id"`
+	ContentURL string `json:"content_url"`
+	CreatedAt time.Time `json:"created_at"`
+}
