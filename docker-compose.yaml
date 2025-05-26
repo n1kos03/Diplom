@@ -9,7 +9,7 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - ./conf/pg_data:/var/lib/postgresql/data
+      - pgdata:/var/lib/postgresql/data
     
   adminer:
     image: adminer:latest 
@@ -28,3 +28,6 @@ services:
     command: server /data --console-address ":9001"
     volumes:
       - ./conf/minio_data:/data
+
+volumes:
+  pgdata:
