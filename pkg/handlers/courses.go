@@ -14,7 +14,14 @@ import (
 	"github.com/julienschmidt/httprouter"
 )
 
-func GETCoursesHandler (w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+// GETCoursesHandler handles GET requests to the "/courses" endpoint.
+//
+// The handler can take an optional "title" query parameter. If the parameter is
+// present, it calls GETCourseByTitle to retrieve the course by title. If the
+// parameter is not present, it calls GETCourses to retrieve all courses.
+//
+// The handler is meant to be used as an httprouter.Handle.
+func GETCoursesHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	URLQuery := r.URL.Query()
 	title := URLQuery.Get("title")
 
@@ -26,6 +33,20 @@ func GETCoursesHandler (w http.ResponseWriter, r *http.Request, ps httprouter.Pa
 	}
 }
 
+// GETCourses retrieves all courses from the database and returns them as a JSON response.
+//
+// The handler expects no URL query parameters.
+//
+// If successful, it returns a JSON response with the following fields for each course:
+// - ID: the course ID
+// - AuthorID: the ID of the user who created the course
+// - Title: the title of the course
+// - Description: the description of the course
+// - CreatedAt: the timestamp when the course was created
+// - Rating: the rating of the course
+// - AuthorName: the nickname of the user who created the course
+//
+// If an error occurs during data retrieval or processing, it responds with an appropriate HTTP error status.
 func GETCourses(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	rows, err := database.DB.Query(`SELECT c.*, u."Nickname" FROM "Course" AS c JOIN "User" AS u ON c."Author_id" = u."ID" ORDER BY c."ID" ASC`)
 	if err != nil {
@@ -66,6 +87,20 @@ func GETCourses(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	}
 }
 
+// GETCourseByID retrieves a course by its ID and returns it as a JSON response.
+//
+// The handler expects the course ID as a parameter in the URL path.
+// It queries the database for the course information and the author's nickname.
+// If a course is found, it returns a JSON response with the following fields:
+// - ID: the course ID
+// - AuthorID: the ID of the author of the course
+// - Title: the title of the course
+// - Description: the description of the course
+// - CreatedAt: the timestamp when the course was created
+// - Rating: the rating of the course
+// - AuthorName: the nickname of the author
+//
+// If an error occurs during data retrieval or processing, it responds with an appropriate HTTP error status.
 func GETCourseByID(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	id := ps.ByName("id")
 
@@ -95,6 +130,20 @@ func GETCourseByID(w http.ResponseWriter, r *http.Request, ps httprouter.Params)
 	json.NewEncoder(w).Encode(course)
 }
 
+// GETCourseByTitle retrieves all courses from the database by title and returns them as a JSON response.
+//
+// The handler expects the title of the course as a parameter.
+//
+// If courses are found, it returns a JSON response with the following fields for each course:
+// - ID: the course ID
+// - AuthorID: the ID of the user who created the course
+// - Title: the title of the course
+// - Description: the description of the course
+// - CreatedAt: the timestamp when the course was created
+// - Rating: the rating of the course
+// - AuthorName: the nickname of the user who created the course
+//
+// If an error occurs during data retrieval or processing, it responds with an appropriate HTTP error status.
 func GETCourseByTitle(w http.ResponseWriter, title string) {
 	query := `SELECT c.*, u."Nickname" FROM "Course" AS c JOIN "User" AS u ON c."Author_id" = u."ID" WHERE c."Title" = $1`
 
@@ -126,6 +175,18 @@ func GETCourseByTitle(w http.ResponseWriter, title string) {
 	json.NewEncoder(w).Encode(courses)
 }
 
+// POSTCourseHandler creates a new course.
+//
+// The handler expects a valid JWT token in the "Authorization" header to
+// authenticate the user. It decodes the course information from the request
+// body (title, description) and inserts it into the database. The handler returns a JSON response
+// with the following fields:
+// - message: a string with the message "Course created"
+// - id: the ID of the newly created course
+//
+// If the request method is not POST, the token is missing or invalid, or if an
+// error occurs during data decoding or insertion, it responds with an
+// appropriate HTTP error status.
 func POSTCourseHandler(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Invalid method", http.StatusMethodNotAllowed)
@@ -175,6 +236,18 @@ func POSTCourseHandler(w http.ResponseWriter, r *http.Request, _ httprouter.Para
 	})
 }
 
+// PUTCourse updates a course.
+//
+// The handler expects the course ID as a parameter in the URL path.
+// It updates the course title or description in the database, depending on the presence of the
+// "title" or "description" query string parameter. If successful, it returns a JSON response with the
+// following fields:
+// - message: a string with the message "title updated" or "description updated"
+// - id: the ID of the updated course
+// - title: the new title of the course, if the title was updated
+// - description: the new description of the course, if the description was updated
+//
+// If an error occurs during data retrieval or processing, it responds with an appropriate HTTP error status.
 func PUTCourse(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	if r.Method != http.MethodPut {
 		http.Error(w, "Invalid method", http.StatusMethodNotAllowed)

@@ -17,6 +17,21 @@ import (
 	"github.com/minio/minio-go/v7"
 )
 
+// GETCourseMaterialsHandler retrieves all materials for a given course and returns them as a JSON response.
+//
+// The handler expects the following parameters in the URL path:
+// - id: the ID of the course
+//
+// The handler queries the database for materials associated with the specified course ID.
+// If successful, it returns a JSON response with the following fields for each material:
+// - ID: the material ID
+// - CourseID: the ID of the course to which the material belongs
+// - ContentURL: the URL of the material content
+// - Description: the description of the material
+// - CreatedAt: the timestamp when the material was created
+// - SectionID: the ID of the section to which the material belongs
+//
+// If an error occurs during data retrieval or processing, it responds with an appropriate HTTP error status.
 func GETCourseMaterialsHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	courseID := ps.ByName("id")
 
@@ -53,6 +68,19 @@ func GETCourseMaterialsHandler(w http.ResponseWriter, r *http.Request, ps httpro
 	json.NewEncoder(w).Encode(materials)
 }
 
+// POSTCourseMaterialsHandler creates a new course material and uploads a file to the object storage.
+//
+// The handler expects the following parameters in the URL path:
+// - id: the ID of the course
+// - section_id: the ID of the section
+// - description: the description of the material
+// - file: the file to upload
+//
+// The handler returns a JSON response with the following fields:
+// - message: a message indicating that the file was uploaded successfully
+// - url: the URL of the uploaded file
+//
+// If an error occurs during data retrieval or processing, it responds with an appropriate HTTP error status.
 func POSTCourseMaterialsHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	err := r.ParseMultipartForm(500 << 20)
 	if err != nil {
@@ -122,6 +150,17 @@ func POSTCourseMaterialsHandler(w http.ResponseWriter, r *http.Request, ps httpr
 	})
 }
 
+// DELETECourseMaterialsHandler deletes a course material.
+//
+// The handler expects a single parameter:
+// - id: the ID of the material to delete
+//
+// If successful, it returns a JSON response with the following fields:
+// - message: a message indicating that the material was deleted successfully
+// - id: the ID of the deleted material
+// - url: the URL of the deleted material
+//
+// If an error occurs during data retrieval or processing, it responds with an appropriate HTTP error status.
 func DELETECourseMaterialsHandler(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	materialID, err := strconv.Atoi(r.FormValue("id"))
 	if err != nil {

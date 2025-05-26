@@ -12,6 +12,14 @@ import (
 	"github.com/julienschmidt/httprouter"
 )
 
+/*************  ✨ Windsurf Command ⭐  *************/
+// GETCommentsHandler retrieves all comments associated with a specific course ID.
+// It expects the course ID as a parameter in the URL path.
+// The handler queries the database for comments belonging to the specified course,
+// and returns them in JSON format. If there is an error during the process, it
+// responds with an appropriate HTTP error status.
+
+/*******  8c504e7b-8cb8-4a5a-96cf-b1eaac2e3e31  *******/
 func GETCommentsHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	courseID := ps.ByName("id")
 
@@ -46,6 +54,12 @@ func GETCommentsHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Pa
 	json.NewEncoder(w).Encode(comments)
 }
 
+// POSTCommentHandler creates a new comment.
+//
+// The handler expects the course ID as a parameter in the URL path.
+// It decodes the comment content from the request body, and inserts it
+// into the database. If there is an error during the process, it
+// responds with an appropriate HTTP error status.
 func POSTCommentHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	var comment models.Comment
 
@@ -100,6 +114,13 @@ func POSTCommentHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Pa
 	})
 }
 
+// DELETECommentHandler deletes a comment by ID.
+//
+// The handler expects a query parameter "id" containing the ID of the comment to delete.
+//
+// It returns a JSON response with the following fields:
+// - message: a message indicating that the comment was deleted successfully
+// - id: the ID of the deleted comment
 func DELETECommentHandler(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	commentID, err := strconv.Atoi(r.URL.Query().Get("id"))
 	if err != nil {

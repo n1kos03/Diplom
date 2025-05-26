@@ -3,7 +3,6 @@ package handlers
 import (
 	"database/sql"
 	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
 
@@ -14,10 +13,14 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-func MainRoute(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, "There would be main page of web site")
-}
-
+// GETUsersHandler is an HTTP handler for the "/users" endpoint. It retrieves
+// either a single user by nickname, if the "nickname" query parameter is
+// present, or all users, if the parameter is not present.
+//
+// The request must be a GET request.
+//
+// The handler responds with a JSON array of User objects, or an appropriate
+// HTTP error status if an error occurs during data retrieval or processing.
 func GETUsersHandler(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	URLQuery := r.URL.Query()
 	nickname := URLQuery.Get("nickname")
@@ -30,6 +33,19 @@ func GETUsersHandler(w http.ResponseWriter, r *http.Request, _ httprouter.Params
 	}
 }
 
+// GETUsers retrieves all users from the database and returns them as a JSON response.
+//
+// This handler does not expect any URL query parameters.
+//
+// If successful, it returns a JSON response with the following fields for each user:
+// - ID: the user ID
+// - Nickname: the user's nickname
+// - Email: the user's email
+// - Password: the user's hashed password
+// - Bio: the user's bio
+// - CreatedAt: the timestamp when the user was created
+//
+// If an error occurs during data retrieval or processing, it responds with an appropriate HTTP error status.
 func GETUsers(w http.ResponseWriter, r *http.Request) {
 	rows, err := database.DB.Query(`SELECT "ID","Nickname", "Email", "Password", "Bio", "Created_at" FROM "User" ORDER BY "ID" ASC`)  
 	if err != nil {
@@ -72,6 +88,18 @@ func GETUsers(w http.ResponseWriter, r *http.Request) {
 	w.Write(j)
 }
 
+// GETUserByID retrieves a user by its ID and returns it as a JSON response.
+//
+// The handler expects the user ID as a parameter in the URL path.
+// If a user is found, it returns a JSON response with the following fields:
+// - ID: the user ID
+// - Nickname: the user's nickname
+// - Email: the user's email
+// - Password: the user's hashed password
+// - Bio: the user's bio
+// - CreatedAt: the timestamp when the user was created
+//
+// If an error occurs during data retrieval or processing, it responds with an appropriate HTTP error status.
 func GETUserByID(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	id := ps.ByName("id")
 
@@ -101,6 +129,18 @@ func GETUserByID(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	json.NewEncoder(w).Encode(user)
 }
 
+// GETUserByNickname retrieves a user by its nickname and returns it as a JSON response.
+//
+// The handler expects the nickname as a parameter.
+// If a user is found, it returns a JSON response with the following fields:
+// - ID: the user ID
+// - Nickname: the user's nickname
+// - Email: the user's email
+// - Password: the user's hashed password
+// - Bio: the user's bio
+// - CreatedAt: the timestamp when the user was created
+//
+// If an error occurs during data retrieval or processing, it responds with an appropriate HTTP error status.
 func GETUserByNickname(w http.ResponseWriter, nickname string) {
 	query := `SELECT "ID","Nickname", "Email", "Password", "Bio", "Created_at" FROM "User" WHERE "Nickname" = $1`
 
@@ -132,6 +172,19 @@ func GETUserByNickname(w http.ResponseWriter, nickname string) {
 	json.NewEncoder(w).Encode(users)
 }
 
+// POSTRegisterUser is an HTTP handler for the "/users" endpoint. It creates a new user in the database.
+//
+// The handler expects the user information as a JSON object in the request body. The expected fields are:
+// - Nickname: the nickname for the user
+// - Email: the email address for the user
+// - Password: the password for the user
+// - Bio: the bio for the user
+//
+// The handler responds with a JSON response with the following fields:
+// - message: a string with the message "User created"
+// - id: the ID of the newly created user
+//
+// If an error occurs during data retrieval or processing, it responds with an appropriate HTTP error status.
 func  POSTRegisterUser(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Invalid method", http.StatusMethodNotAllowed)
@@ -184,6 +237,18 @@ func  POSTRegisterUser(w http.ResponseWriter, r *http.Request, _ httprouter.Para
 	})
 }
 
+// PUTUser updates a user's nickname and/or bio.
+//
+// The handler expects the user ID as a parameter in the URL path.
+// It updates the user's nickname or bio in the database, based on the presence of
+// the "nickname" or "bio" query string parameter. If successful, it returns a JSON response with the
+// following fields:
+// - message: a string with the message "nickname updated" or "bio updated"
+// - id: the ID of the updated user
+// - nickname: the new nickname of the user, if the nickname was updated
+// - bio: the new bio of the user, if the bio was updated
+//
+// If an error occurs during data retrieval or processing, it responds with an appropriate HTTP error status.
 func PUTUser(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	if r.Method != http.MethodPut {
 		http.Error(w, "Invalid method", http.StatusMethodNotAllowed)
@@ -233,6 +298,16 @@ func PUTUser(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	}
 }
 
+// DELETEUserHandler deletes a user by ID.
+//
+// The handler expects the user ID as a parameter in the URL path.
+// It deletes the associated record from the database.
+//
+// If successful, it returns a JSON response with the following fields:
+// - message: a message indicating that the user was deleted successfully
+// - id: the ID of the deleted user
+//
+// If an error occurs during data retrieval or processing, it responds with an appropriate HTTP error status.
 func DELETEUserHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	if r.Method != http.MethodDelete {
 		http.Error(w, "Invalid method", http.StatusMethodNotAllowed)

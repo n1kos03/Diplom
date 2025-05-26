@@ -12,6 +12,9 @@ import (
 	"github.com/julienschmidt/httprouter"
 )
 
+// GETCourseRatingHandler retrieves all course ratings and returns them as a JSON response.
+//
+// If there is an error during data retrieval or processing, it responds with an appropriate HTTP error status.
 func GETCourseRatingHandler(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	rows, err := database.DB.Query(`SELECT * FROM course_rating`)
 	if err != nil {
@@ -43,6 +46,17 @@ func GETCourseRatingHandler(w http.ResponseWriter, r *http.Request, _ httprouter
 	json.NewEncoder(w).Encode(courseRatings)
 }
 
+// POSTCourseRatingHandler creates a new course rating.
+//
+// The handler expects the course ID as a parameter in the URL path.
+// It decodes the rating content from the request body, and inserts it
+// into the database. If successful, it returns a JSON response with the
+// following fields:
+// - message: a string with the message "Rating created"
+// - id: the ID of the newly created rating
+// - rating: the rating content
+//
+// If there is an error during data retrieval or processing, it responds with an appropriate HTTP error status.
 func POSTCourseRatingHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Invalid method", http.StatusMethodNotAllowed)
@@ -89,6 +103,17 @@ func POSTCourseRatingHandler(w http.ResponseWriter, r *http.Request, ps httprout
 	})
 }
 
+// PUTCourseRatingHandler updates a course rating.
+//
+// The handler expects the course ID as a parameter in the URL path.
+// It decodes the rating content from the request body, and updates it
+// in the database. If successful, it returns a JSON response with the
+// following fields:
+// - message: a string with the message "Rating updated"
+// - previousRating: the previous rating content
+// - newRating: the new rating content
+//
+// If there is an error during data retrieval or processing, it responds with an appropriate HTTP error status.
 func PUTCourseRatingHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	if r.Method != http.MethodPut {
 		http.Error(w, "Invalid method", http.StatusMethodNotAllowed)
@@ -149,6 +174,15 @@ func PUTCourseRatingHandler(w http.ResponseWriter, r *http.Request, ps httproute
 	})
 }
 
+// DELETECourseRatingHandler deletes a course rating.
+//
+// The handler expects the course ID as a parameter in the URL path.
+// It checks if the request is a DELETE request and if the user is authorized.
+// If successful, it deletes the rating from the database and returns a JSON response with the following fields:
+// - message: a message indicating that the rating was deleted successfully
+// - id: the ID of the deleted rating
+//
+// If an error occurs during data retrieval or processing, it responds with an appropriate HTTP error status.
 func DELETECourseRatingHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	if r.Method != http.MethodDelete {
 		http.Error(w, "Invalid method", http.StatusMethodNotAllowed)
@@ -169,7 +203,6 @@ func DELETECourseRatingHandler(w http.ResponseWriter, r *http.Request, ps httpro
 		http.Error(w, "Invalid course id", http.StatusBadRequest)
 		return
 	}
-
 
 	var deletedRatingID int
 	err = database.DB.QueryRow(`DELETE FROM course_rating WHERE course_id = $1 AND user_id = $2 RETURNING id`, courseRating.CourseID, courseRating.UserID).Scan(&deletedRatingID)

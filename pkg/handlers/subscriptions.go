@@ -12,6 +12,15 @@ import (
 	"github.com/julienschmidt/httprouter"
 )
 
+// GETSubscriptionsHandler retrieves all subscriptions from the database and returns them as a JSON response.
+//
+// The handler queries the database for all subscriptions and returns them as a JSON response.
+// If successful, it returns a JSON response with the following fields for each subscription:
+// - UserID: the ID of the user who subscribed to the course
+// - CourseID: the ID of the course to which the user subscribed
+// - CreatedAt: the timestamp when the user subscribed to the course
+//
+// If an error occurs during data retrieval or processing, it responds with an appropriate HTTP error status.
 func GETSubscriptionsHandler( w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	rows, err := database.DB.Query(`SELECT * FROM "Subscriptions" ORDER BY "User_id" ASC`)
 	if err != nil {
@@ -43,6 +52,16 @@ func GETSubscriptionsHandler( w http.ResponseWriter, r *http.Request, _ httprout
 	json.NewEncoder(w).Encode(subscriptions)
 }
 
+// POSTSubscriptionHandler creates a new subscription.
+//
+// The handler expects the course ID as a form value from the request body.
+// It authenticates the user and inserts the subscription into the database.
+// If successful, it returns a JSON response with the following fields:
+// - message: a string with the message "Subscription created"
+// - user_id: the ID of the user who subscribed to the course
+// - course_id: the ID of the course to which the user subscribed
+//
+// If an error occurs during data retrieval or processing, it responds with an appropriate HTTP error status.
 func POSTSubscriptionHandler(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Invalid method", http.StatusMethodNotAllowed)
@@ -82,6 +101,16 @@ func POSTSubscriptionHandler(w http.ResponseWriter, r *http.Request, _ httproute
 	})
 }
 
+// DELETESubscriptionHandler deletes a subscription.
+//
+// The handler expects the course ID as a parameter in the request body.
+// It checks if the request is a DELETE request and if the user is authorized.
+// If successful, it deletes the subscription from the database and returns a JSON response with the following fields:
+// - message: a string with the message "Subscription deleted"
+// - user_id: the ID of the user who unsubscribed from the course
+// - course_id: the ID of the course from which the user unsubscribed
+//
+// If an error occurs during data retrieval or processing, it responds with an appropriate HTTP error status.
 func DELETESubscriptionHandler(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	if r.Method != http.MethodDelete {
 		http.Error(w, "Invalid method", http.StatusMethodNotAllowed)

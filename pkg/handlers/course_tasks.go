@@ -16,6 +16,21 @@ import (
 	"github.com/minio/minio-go/v7"
 )
 
+// GETCourseTasksHandler retrieves all tasks for a given course and returns them as a JSON response.
+//
+// This handler expects the following parameters in the URL path:
+// - id: the ID of the course
+//
+// The handler queries the database for tasks associated with the specified course ID.
+// If successful, it returns a JSON response with the following fields for each task:
+// - ID: the task ID
+// - CourseID: the ID of the course to which the task belongs
+// - SectionID: the ID of the section to which the task belongs
+// - ContentURL: the URL of the task content
+// - Description: the description of the task
+// - CreatedAt: the timestamp when the task was created
+//
+// If an error occurs during data retrieval or processing, it responds with an appropriate HTTP error status.
 func GETCourseTasksHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	courseID := ps.ByName("id")
 
@@ -52,6 +67,17 @@ func GETCourseTasksHandler(w http.ResponseWriter, r *http.Request, ps httprouter
 	json.NewEncoder(w).Encode(tasks)
 }
 
+// POSTCourseTasksHandler creates a new course task and uploads a file to the object storage.
+//
+// The handler expects the following parameters:
+// - id: the ID of the course
+// - section_id: the ID of the section
+// - description: the description of the task
+// - file: the file to upload
+//
+// The handler returns a JSON response with the following fields:
+// - message: a message indicating that the file was uploaded successfully
+// - url: the URL of the uploaded file
 func POSTCourseTasksHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	err := r.ParseMultipartForm(500 << 20)
 	if err != nil {
@@ -121,6 +147,17 @@ func POSTCourseTasksHandler(w http.ResponseWriter, r *http.Request, ps httproute
 	})
 }
 
+// DELETECourseTasksHandler deletes a course task.
+//
+// The handler expects a single parameter:
+// - id: the ID of the task to delete
+//
+// If successful, it returns a JSON response with the following fields:
+// - message: a message indicating that the material was deleted successfully
+// - id: the ID of the deleted task
+// - url: the URL of the deleted task
+//
+// If an error occurs during data retrieval or processing, it responds with an appropriate HTTP error status.
 func DELETECourseTasksHandler(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	taskID, err := strconv.Atoi(r.FormValue("id"))
 	if err != nil {

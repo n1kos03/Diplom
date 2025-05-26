@@ -15,6 +15,16 @@ import (
 	"github.com/minio/minio-go/v7"
 )
 
+// GETUserPhotoHandler retrieves all user photos for a given user and returns them as a JSON response.
+//
+// The handler expects the user ID as a parameter in the URL path.
+// If successful, it returns a JSON response with the following fields for each user photo:
+// - ID: the ID of the photo
+// - UserID: the ID of the user who uploaded the photo
+// - ContentURL: the URL of the photo content
+// - UploadedAt: the timestamp when the photo was uploaded
+//
+// If an error occurs during data retrieval or processing, it responds with an appropriate HTTP error status.
 func GETUserPhotoHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	id := ps.ByName("id")
 
@@ -49,6 +59,18 @@ func GETUserPhotoHandler(w http.ResponseWriter, r *http.Request, ps httprouter.P
 	json.NewEncoder(w).Encode(userPhotos)
 }
 
+// POSTUserPhotoHandler creates a new user photo and uploads a file to the object storage.
+//
+// The handler expects the following parameter in the URL path:
+// - id: the ID of the user
+//
+// The handler expects a file to be uploaded in the request body, which is inserted into the database and uploaded to the object storage.
+// If successful, it returns a JSON response with the following fields:
+// - message: a message indicating that the file was uploaded successfully
+// - user_id: the ID of the user who uploaded the photo
+// - content_url: the URL of the uploaded file
+//
+// If an error occurs during data retrieval or processing, it responds with an appropriate HTTP error status.
 func POSTUserPhotoHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	err := r.ParseMultipartForm(50 << 20)
 	if err != nil {
@@ -111,6 +133,18 @@ func POSTUserPhotoHandler(w http.ResponseWriter, r *http.Request, ps httprouter.
 	})
 }
 
+// DELETEUserPhotoHandler deletes a user photo.
+//
+// The handler expects the photo ID as a parameter in the URL path.
+// It retrieves the content URL of the photo, removes the associated object from the storage,
+// and deletes the record from the database.
+//
+// If successful, it returns a JSON response with the following fields:
+// - message: a message indicating that the photo was deleted successfully
+// - id: the ID of the deleted photo
+// - content_url: the URL of the deleted photo
+//
+// If an error occurs during data retrieval or processing, it responds with an appropriate HTTP error status.
 func DELETEUserPhotoHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	photoID := ps.ByName("id")
 

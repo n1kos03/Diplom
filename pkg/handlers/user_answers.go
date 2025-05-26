@@ -17,6 +17,19 @@ import (
 	"github.com/minio/minio-go/v7"
 )
 
+// GETUserAnswersHandler retrieves all user answers for a given task and returns them as a JSON response.
+//
+// The handler expects the following parameter in the URL path:
+// - task_id: the ID of the task
+//
+// If successful, it returns a JSON response with the following fields for each answer:
+// - ID: the answer ID
+// - TaskID: the ID of the task for which the answer was submitted
+// - UserID: the ID of the user who submitted the answer
+// - ContentURL: the URL of the answer content
+// - CreatedAt: the timestamp when the answer was submitted
+//
+// If an error occurs during data retrieval or processing, it responds with an appropriate HTTP error status.
 func GETUserAnswersHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	taskID := ps.ByName("task_id")
 
@@ -53,6 +66,15 @@ func GETUserAnswersHandler(w http.ResponseWriter, r *http.Request, ps httprouter
 	json.NewEncoder(w).Encode(answers)
 }
 
+// POSTUserAnswerHandler creates a new user answer and uploads a file to the object storage.
+//
+// The handler expects the course ID and task ID as parameters in the URL path.
+// It authenticates the user and inserts the answer into the database.
+// If successful, it returns a JSON response with the following fields:
+// - message: a string with the message "File uploaded successfully"
+// - url: the URL of the uploaded file
+//
+// If an error occurs during data retrieval or processing, it responds with an appropriate HTTP error status.
 func POSTUserAnswerHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	claims, err := auth.GetTokenClaimsFromRequest(r)
 	if err != nil || claims == nil {
@@ -130,6 +152,18 @@ func POSTUserAnswerHandler(w http.ResponseWriter, r *http.Request, ps httprouter
 	})
 }
 
+// DELETEUserAnswerHandler deletes a user answer.
+//
+// The handler expects a query parameter "id" containing the ID of the answer to delete.
+// It retrieves the content URL of the answer, removes the associated object from the storage,
+// and deletes the record from the database.
+//
+// If successful, it returns a JSON response with the following fields:
+// - message: a message indicating that the answer was deleted successfully
+// - id: the ID of the deleted answer
+// - url: the URL of the deleted answer
+//
+// If an error occurs during data retrieval or processing, it responds with an appropriate HTTP error status.
 func DELETEUserAnswerHandler(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	answerID, err := strconv.Atoi(r.FormValue("id"))
 	if err != nil {

@@ -11,6 +11,20 @@ import (
 	"github.com/julienschmidt/httprouter"
 )
 
+// GETTaskReviewsHandler retrieves a task review for a given answer ID and returns it as a JSON response.
+//
+// This handler expects the following parameter in the URL path:
+// - answer_id: the ID of the answer for which the task review is requested
+//
+// The handler queries the database for the task review associated with the specified answer ID.
+// If successful, it returns a JSON response with the following fields:
+// - ID: the task review ID
+// - AnswerID: the ID of the answer associated with the task review
+// - Grade: the grade assigned in the task review
+// - AuthorComment: the comment provided by the author in the task review
+// - CreatedAt: the timestamp when the task review was created
+//
+// If an error occurs during data retrieval or processing, it responds with an appropriate HTTP error status.
 func GETTaskReviewsHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	answerID := ps.ByName("answer_id")
 
@@ -42,6 +56,18 @@ func GETTaskReviewsHandler(w http.ResponseWriter, r *http.Request, ps httprouter
 	json.NewEncoder(w).Encode(task_review)
 }
 
+// POSTTaskReviewHandler creates a new task review.
+//
+// The handler expects the following parameter in the URL path:
+// - answer_id: the ID of the answer for which the task review is requested
+//
+// The handler decodes the task review content from the request body (grade, author_comment) and inserts
+// it into the database. If successful, it returns a JSON response with the
+// following fields:
+// - message: a string with the message "Task review created"
+// - id: the ID of the newly created task review
+//
+// If there is an error during data retrieval or processing, it responds with an appropriate HTTP error status.
 func POSTTaskReviewHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	var task_review models.TaskReview
 	var err error
@@ -73,6 +99,16 @@ func POSTTaskReviewHandler(w http.ResponseWriter, r *http.Request, ps httprouter
 	})
 }
 
+// DELETETaskReviewHandler deletes a task review by ID.
+//
+// The handler expects a single parameter:
+// - id: the ID of the task review to delete
+//
+// If successful, it returns a JSON response with the following fields:
+// - message: a message indicating that the task review was deleted successfully
+// - id: the ID of the deleted task review
+//
+// If an error occurs during data retrieval or processing, it responds with an appropriate HTTP error status.
 func DELETETaskReviewHandler(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	taskReviewID, err := strconv.Atoi(r.FormValue("id"))
 	if err != nil {
