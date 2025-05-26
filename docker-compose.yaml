@@ -9,7 +9,8 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      - pg_data:/var/lib/postgresql/data
+      - ./db/init:/docker-entrypoint-initdb.d
     
   adminer:
     image: adminer:latest 
@@ -30,4 +31,4 @@ services:
       - ./conf/minio_data:/data
 
 volumes:
-  pgdata:
+  pg_data:
