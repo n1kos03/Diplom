@@ -48,7 +48,7 @@ func GETCourseMaterialsHandler(w http.ResponseWriter, r *http.Request, ps httpro
 	for rows.Next() {
 		var material models.CourseMaterials
 
-		err := rows.Scan(&material.ID, &material.CourseID, &material.ContentURL, &material.Description, &material.CreatedAt, &material.SectionID, &material.OrderNumber)
+		err := rows.Scan(&material.ID, &material.CourseID, &material.Title, &material.ContentURL, &material.Description, &material.CreatedAt, &material.SectionID, &material.OrderNumber)
 		if err != nil {
 			http.Error(w, "Error scanning data", http.StatusInternalServerError)
 			log.Println("Error scanning data: ", err)
@@ -101,6 +101,7 @@ func POSTCourseMaterialsHandler(w http.ResponseWriter, r *http.Request, ps httpr
 		return
 	}
 	description := r.FormValue("description")
+	title := r.FormValue("title")
 	orderNumber, err := strconv.Atoi(r.FormValue("order_number"))
 	if err != nil {
 		http.Error(w, "Error converting order number to int", http.StatusInternalServerError)
@@ -143,7 +144,7 @@ func POSTCourseMaterialsHandler(w http.ResponseWriter, r *http.Request, ps httpr
 
 	fileURL := fmt.Sprintf("http://localhost:9000/%s/%s", bucketName, uploadInfo.Key)
 
-	_, err = database.DB.Exec(`INSERT INTO "Course_materials" ("Course_id", "Content_URL", "Description", section_id, order_number) VALUES ($1, $2, $3, $4, $5)`, courseID, fileURL, description, sectionID, orderNumber)
+	_, err = database.DB.Exec(`INSERT INTO "Course_materials" ("Course_id", title, "Content_URL", "Description", section_id, order_number) VALUES ($1, $2, $3, $4, $5, $6)`, courseID, title, fileURL, description, sectionID, orderNumber)
 	if err != nil {
 		http.Error(w, "Error inserting data", http.StatusInternalServerError)
 		return
@@ -179,11 +180,20 @@ func PUTCourseMaterialsHandler(w http.ResponseWriter, r *http.Request, ps httpro
 	}
 
 	description := r.FormValue("description")
+	title := r.FormValue("title")
 	orderNumber, err := strconv.Atoi(r.FormValue("order_number"))
 	if err != nil {
 		http.Error(w, "Error converting order number to int", http.StatusInternalServerError)
 		log.Println("Error converting order number to int: ", err)
 		return
+	}
+
+	if title != "" {
+		_, err := database.DB.Exec(`UPDATE "Course_materials" SET title = $1 WHERE "ID" = $2`, title, materialID)
+		if err != nil {
+			http.Error(w, "Error updating data", http.StatusInternalServerError)
+			return
+		}
 	}
 
 	if description != "" {

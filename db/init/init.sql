@@ -63,6 +63,7 @@ CREATE TABLE public."Comments" (
 CREATE TABLE public."Course_materials" (
     "ID" SERIAL PRIMARY KEY,
     "Course_id" INTEGER NOT NULL REFERENCES public."Course"("ID"),
+    title TEXT NOT NULL,
     "Content_URL" TEXT NOT NULL,
     "Description" TEXT,
     "Uploaded_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
@@ -104,6 +105,7 @@ CREATE TABLE public.course_task (
     id SERIAL PRIMARY KEY,
     course_id INTEGER REFERENCES public."Course"("ID"),
     section_id INTEGER REFERENCES public.section(id) ON DELETE CASCADE,
+    title TEXT NOT NULL,
     content_url TEXT NOT NULL,
     description TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

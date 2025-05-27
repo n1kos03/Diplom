@@ -24,6 +24,7 @@ type Course struct {
 type CourseMaterials struct {
 	ID int `json:"id"`
 	CourseID int `json:"course_id"`
+	Title string `json:"title"`
 	ContentURL string `json:"content_url"`
 	Description string `json:"description"`
 	CreatedAt time.Time `json:"created_at"`
@@ -71,6 +72,7 @@ type CourseTask struct {
 	ID int `json:"id"`
 	CourseID int `json:"course_id"`
 	SectionID int `json:"section_id"`
+	Title string `json:"title"`
 	OrderNumber int `json:"order_number"`
 	ContentURL string `json:"content_url"`
 	Description string `json:"description"`

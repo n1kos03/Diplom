@@ -47,7 +47,7 @@ func GETCourseTasksHandler(w http.ResponseWriter, r *http.Request, ps httprouter
 	for rows.Next() {
 		var task models.CourseTask
 
-		err := rows.Scan(&task.ID, &task.CourseID, &task.SectionID, &task.ContentURL, &task.Description, &task.CreatedAt, &task.OrderNumber)
+		err := rows.Scan(&task.ID, &task.CourseID, &task.SectionID, &task.Title, &task.ContentURL, &task.Description, &task.CreatedAt, &task.OrderNumber)
 		if err != nil {
 			http.Error(w, "Error scanning data", http.StatusInternalServerError)
 			log.Println("Error scanning data: ", err)
@@ -98,6 +98,7 @@ func POSTCourseTasksHandler(w http.ResponseWriter, r *http.Request, ps httproute
 		return
 	}
 	description := r.FormValue("description")
+	title := r.FormValue("title")
 	orderNumber, err := strconv.Atoi(r.FormValue("order_number"))
 	if err != nil {
 		http.Error(w, "Error converting order number to int", http.StatusInternalServerError)
@@ -140,7 +141,7 @@ func POSTCourseTasksHandler(w http.ResponseWriter, r *http.Request, ps httproute
 
 	fileURL := fmt.Sprintf("http://localhost:9000/%s/%s", bucketName, uploadInfo.Key)
 
-	_, err = database.DB.Exec(`INSERT INTO course_task (course_id, section_id, content_URL, description, order_number) VALUES ($1, $2, $3, $4, $5)`, courseID, sectionID, fileURL, description, orderNumber)  
+	_, err = database.DB.Exec(`INSERT INTO course_task (course_id, section_id, title, content_URL, description, order_number) VALUES ($1, $2, $3, $4, $5, $6)`, courseID, sectionID, title, fileURL, description, orderNumber)  
 	if err != nil {
 		http.Error(w, "Error inserting data", http.StatusInternalServerError)
 		return
@@ -176,11 +177,20 @@ func PUTCourseTasksHandler(w http.ResponseWriter, r *http.Request, ps httprouter
 	}
 
 	description := r.FormValue("description")
+	title := r.FormValue("title")
 	orderNumber, err := strconv.Atoi(r.FormValue("order_number"))
 	if err != nil {
 		http.Error(w, "Error converting order number to int", http.StatusInternalServerError)
 		log.Println("Error converting order number to int: ", err)
 		return
+	}
+
+	if title != "" {
+		_, err := database.DB.Exec(`UPDATE course_task SET title = $1 WHERE id = $2`, title, taskID)
+		if err != nil {
+			http.Error(w, "Error updating data", http.StatusInternalServerError)
+			return
+		}
 	}
 
 	if description != "" {
