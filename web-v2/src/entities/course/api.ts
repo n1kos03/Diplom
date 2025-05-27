@@ -70,8 +70,21 @@ export const courseRepository = () => {
             const formData = new FormData();
             formData.append('file', materialData.file);
             formData.append('description', materialData.description);
+            formData.append('order_number', materialData.order_number.toString());
 
             return apiInstance.post(`/courses/${courseId}/materials-upload/${sectionId}`, formData, {
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                },
+            });
+        },
+
+        updateMaterial(courseId: number, sectionId: number, materialId: number, description: string, orderNumber: number): Promise<IMaterialResponse> {
+            const formData = new FormData();
+            formData.append('description', description);
+            formData.append('order_number', orderNumber.toString());
+
+            return apiInstance.put(`/courses/${courseId}/materials/${sectionId}/${materialId}`, formData, {
                 headers: {
                     'Content-Type': 'multipart/form-data',
                 },
@@ -104,8 +117,21 @@ export const courseRepository = () => {
             const formData = new FormData();
             formData.append('file', taskData.file);
             formData.append('description', taskData.description);
+            formData.append('order_number', taskData.order_number.toString());
 
             return apiInstance.post(`/courses/${courseId}/tasks-upload/${sectionId}`, formData, {
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                },
+            });
+        },
+
+        updateTask(courseId: number, sectionId: number, taskId: number, description: string, orderNumber: number): Promise<ITaskResponse> {
+            const formData = new FormData();
+            formData.append('description', description);
+            formData.append('order_number', orderNumber.toString());
+
+            return apiInstance.put(`/courses/${courseId}/tasks/${sectionId}/${taskId}`, formData, {
                 headers: {
                     'Content-Type': 'multipart/form-data',
                 },

@@ -147,13 +147,14 @@ export const Course = () => {
                                                     title: material.description,
                                                     duration: "0:00",
                                                     isCompleted: false,
-                                                    type: "video" as const
+                                                    type: "material" as const,
+                                                    content_url: material.content_url
                                                 })),
                                                 ...sectionTasks.map(task => ({
                                                     title: task.description,
                                                     duration: "0:00",
                                                     isCompleted: false,
-                                                    type: "document" as const
+                                                    type: "task" as const
                                                 }))
                                             ]}
                                         />
@@ -178,7 +179,8 @@ interface CourseSectionProps {
         title: string
         duration: string
         isCompleted: boolean
-        type: "video" | "document"
+        type: "material" | "task"
+        content_url?: string
     }[]
 }
 
@@ -201,22 +203,54 @@ function CourseSection({ index, title, onExpand, lectures = [] }: CourseSectionP
                             <AccordionTrigger className="px-4 py-3 font-medium hover:no-underline cursor-pointer">
                                 <div className="flex items-center gap-4">
                                     <span>{block.title}</span>
-                                    {block.type === "video" ? <span className="text-[12px] border border-blue-200 text-blue-500 p-1 rounded-md mr-2">Лекция</span> : <span className="text-[12px] border border-teal-200 text-teal-500 p-1 rounded-md mr-2">Задание</span>}
+                                    {block.type === "material" ? 
+                                        <span className="text-[12px] border border-blue-200 text-blue-500 p-1 rounded-md mr-2">Материал</span> : 
+                                        <span className="text-[12px] border border-teal-200 text-teal-500 p-1 rounded-md mr-2">Задание</span>
+                                    }
                                 </div>
                             </AccordionTrigger>
                             <AccordionContent className="px-4 py-3 flex gap-4 sm:flex-row flex-col text-wrap">
-                                <div className="aspect-video max-h-[200px] min-w-[300px] rounded-md overflow-hidden">
-                                    <iframe
-                                        src="https://rutube.ru/play/embed/b1ba4b053467a40524375b2c1a236985"
-                                        allow="clipboard-write; autoplay"
-                                        allowFullScreen
-                                        className="w-full h-full"
-                                    />
-                                </div>
+                                {block.type === "material" && block.content_url ? (
+                                    <div className="aspect-video max-h-[200px] min-w-[300px] rounded-md overflow-hidden">
+                                        {block.content_url.endsWith('.mp4') || block.content_url.endsWith('.webm') ? (
+                                            <video
+                                                src={block.content_url}
+                                                controls
+                                                className="w-full h-full"
+                                            />
+                                        ) : block.content_url.endsWith('.jpg') || block.content_url.endsWith('.png') || block.content_url.endsWith('.jpeg') ? (
+                                            <img
+                                                src={block.content_url}
+                                                alt={block.title}
+                                                className="w-full h-full object-cover"
+                                            />
+                                        ) : (
+                                            <div className="w-full h-full flex items-center justify-center bg-gray-100">
+                                                <a 
+                                                    href={block.content_url}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="text-blue-500 hover:text-blue-700"
+                                                >
+                                                    Открыть файл
+                                                </a>
+                                            </div>
+                                        )}
+                                    </div>
+                                ) : (
+                                    <div className="aspect-video max-h-[200px] min-w-[300px] rounded-md overflow-hidden">
+                                        <iframe
+                                            src="https://rutube.ru/play/embed/b1ba4b053467a40524375b2c1a236985"
+                                            allow="clipboard-write; autoplay"
+                                            allowFullScreen
+                                            className="w-full h-full"
+                                        />
+                                    </div>
+                                )}
                                 <div className="flex flex-col gap-1">
                                     <div className="flex items-center gap-2">
                                         <p className="text-[15px] text-gray-800 font-bold">
-                                            {block.type === "video" ? "Содержание лекции" : "Задание"}
+                                            {block.type === "material" ? "Содержание материала" : "Задание"}
                                         </p>
                                     </div>
                                     <p className="text-[14px] text-gray-600">
