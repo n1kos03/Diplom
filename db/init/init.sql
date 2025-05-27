@@ -66,7 +66,8 @@ CREATE TABLE public."Course_materials" (
     "Content_URL" TEXT NOT NULL,
     "Description" TEXT,
     "Uploaded_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    section_id BIGINT
+    section_id BIGINT,
+    order_number INTEGER
 );
 
 CREATE TABLE public."Subscriptions" (
@@ -105,7 +106,8 @@ CREATE TABLE public.course_task (
     section_id INTEGER REFERENCES public.section(id) ON DELETE CASCADE,
     content_url TEXT NOT NULL,
     description TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    order_number INTEGER
 );
 
 CREATE TABLE public.user_answer (

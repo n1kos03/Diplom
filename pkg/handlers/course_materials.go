@@ -48,7 +48,7 @@ func GETCourseMaterialsHandler(w http.ResponseWriter, r *http.Request, ps httpro
 	for rows.Next() {
 		var material models.CourseMaterials
 
-		err := rows.Scan(&material.ID, &material.CourseID, &material.ContentURL, &material.Description, &material.CreatedAt, &material.SectionID)
+		err := rows.Scan(&material.ID, &material.CourseID, &material.ContentURL, &material.Description, &material.CreatedAt, &material.SectionID, &material.OrderNumber)
 		if err != nil {
 			http.Error(w, "Error scanning data", http.StatusInternalServerError)
 			log.Println("Error scanning data: ", err)
@@ -75,6 +75,7 @@ func GETCourseMaterialsHandler(w http.ResponseWriter, r *http.Request, ps httpro
 // - section_id: the ID of the section
 // - description: the description of the material
 // - file: the file to upload
+// - order_number: the order number of the material
 //
 // The handler returns a JSON response with the following fields:
 // - message: a message indicating that the file was uploaded successfully
@@ -100,6 +101,12 @@ func POSTCourseMaterialsHandler(w http.ResponseWriter, r *http.Request, ps httpr
 		return
 	}
 	description := r.FormValue("description")
+	orderNumber, err := strconv.Atoi(r.FormValue("order_number"))
+	if err != nil {
+		http.Error(w, "Error converting order number to int", http.StatusInternalServerError)
+		log.Println("Error converting order number to int: ", err)
+		return
+	}
 
 	file, handler, err := r.FormFile("file")
 	if err != nil {
@@ -136,7 +143,7 @@ func POSTCourseMaterialsHandler(w http.ResponseWriter, r *http.Request, ps httpr
 
 	fileURL := fmt.Sprintf("http://localhost:9000/%s/%s", bucketName, uploadInfo.Key)
 
-	_, err = database.DB.Exec(`INSERT INTO "Course_materials" ("Course_id", "Content_URL", "Description", section_id) VALUES ($1, $2, $3, $4)`, courseID, fileURL, description, sectionID)
+	_, err = database.DB.Exec(`INSERT INTO "Course_materials" ("Course_id", "Content_URL", "Description", section_id, order_number) VALUES ($1, $2, $3, $4, $5)`, courseID, fileURL, description, sectionID, orderNumber)
 	if err != nil {
 		http.Error(w, "Error inserting data", http.StatusInternalServerError)
 		return
@@ -147,6 +154,59 @@ func POSTCourseMaterialsHandler(w http.ResponseWriter, r *http.Request, ps httpr
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"message": "File uploaded successfully",
 		"url": fileURL,
+	})
+}
+
+// PUTCourseMaterialsHandler updates a course material.
+//
+// The handler expects the following parameters in the URL path:
+// - material_id: the ID of the material to update
+//
+// The handler expects the following parameters in the request body:
+// - description: the new description of the material
+// - order_number: the new order number of the material
+//
+// The handler returns a JSON response with the following fields:
+// - message: a message indicating that the material was updated successfully
+// - id: the ID of the updated material
+//
+// If an error occurs during data retrieval or processing, it responds with an appropriate HTTP error status.
+func PUTCourseMaterialsHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	materialID, err := strconv.Atoi(ps.ByName("material_id"))
+	if err != nil {
+		http.Error(w, "Error converting material ID to int", http.StatusInternalServerError)
+		return
+	}
+
+	description := r.FormValue("description")
+	orderNumber, err := strconv.Atoi(r.FormValue("order_number"))
+	if err != nil {
+		http.Error(w, "Error converting order number to int", http.StatusInternalServerError)
+		log.Println("Error converting order number to int: ", err)
+		return
+	}
+
+	if description != "" {
+		_, err := database.DB.Exec(`UPDATE "Course_materials" SET "Description" = $1 WHERE "ID" = $2`, description, materialID)
+		if err != nil {
+			http.Error(w, "Error updating data", http.StatusInternalServerError)
+			return
+		}
+	}
+
+	if orderNumber != 0 {
+		_, err = database.DB.Exec(`UPDATE "Course_materials" SET order_number = $1 WHERE "ID" = $2`, orderNumber, materialID)
+		if err != nil {
+			http.Error(w, "Error updating data", http.StatusInternalServerError)
+			return
+		}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"message": "Material updated successfully",
+		"id": materialID,
 	})
 }
 

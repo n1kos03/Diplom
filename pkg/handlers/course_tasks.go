@@ -47,7 +47,7 @@ func GETCourseTasksHandler(w http.ResponseWriter, r *http.Request, ps httprouter
 	for rows.Next() {
 		var task models.CourseTask
 
-		err := rows.Scan(&task.ID, &task.CourseID, &task.SectionID, &task.ContentURL, &task.Description, &task.CreatedAt)
+		err := rows.Scan(&task.ID, &task.CourseID, &task.SectionID, &task.ContentURL, &task.Description, &task.CreatedAt, &task.OrderNumber)
 		if err != nil {
 			http.Error(w, "Error scanning data", http.StatusInternalServerError)
 			log.Println("Error scanning data: ", err)
@@ -74,6 +74,7 @@ func GETCourseTasksHandler(w http.ResponseWriter, r *http.Request, ps httprouter
 // - section_id: the ID of the section
 // - description: the description of the task
 // - file: the file to upload
+// - order_number: the order number of the task
 //
 // The handler returns a JSON response with the following fields:
 // - message: a message indicating that the file was uploaded successfully
@@ -97,6 +98,12 @@ func POSTCourseTasksHandler(w http.ResponseWriter, r *http.Request, ps httproute
 		return
 	}
 	description := r.FormValue("description")
+	orderNumber, err := strconv.Atoi(r.FormValue("order_number"))
+	if err != nil {
+		http.Error(w, "Error converting order number to int", http.StatusInternalServerError)
+		log.Println("Error converting order number to int: ", err)
+		return
+	}
 
 	file, handler, err := r.FormFile("file")
 	if err != nil {
@@ -133,7 +140,7 @@ func POSTCourseTasksHandler(w http.ResponseWriter, r *http.Request, ps httproute
 
 	fileURL := fmt.Sprintf("http://localhost:9000/%s/%s", bucketName, uploadInfo.Key)
 
-	_, err = database.DB.Exec(`INSERT INTO course_task (course_id, section_id, content_URL, description) VALUES ($1, $2, $3, $4)`, courseID, sectionID, fileURL, description) 
+	_, err = database.DB.Exec(`INSERT INTO course_task (course_id, section_id, content_URL, description, order_number) VALUES ($1, $2, $3, $4, $5)`, courseID, sectionID, fileURL, description, orderNumber)  
 	if err != nil {
 		http.Error(w, "Error inserting data", http.StatusInternalServerError)
 		return
@@ -144,6 +151,59 @@ func POSTCourseTasksHandler(w http.ResponseWriter, r *http.Request, ps httproute
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"message": "File uploaded successfully",
 		"url": fileURL,
+	})
+}
+
+// PUTCourseTasksHandler updates a course task.
+//
+// The handler expects the following parameters in the URL path:
+// - task_id: the ID of the task to update
+//
+// The handler expects the following parameters in the request body:
+// - description: the new description of the task
+// - order_number: the new order number of the task
+//
+// The handler returns a JSON response with the following fields:
+// - message: a message indicating that the task was updated successfully
+// - id: the ID of the updated task
+//
+// If an error occurs during data retrieval or processing, it responds with an appropriate HTTP error status.
+func PUTCourseTasksHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	taskID, err := strconv.Atoi(ps.ByName("task_id"))
+	if err != nil {
+		http.Error(w, "Error converting task ID to int", http.StatusInternalServerError)
+		return
+	}
+
+	description := r.FormValue("description")
+	orderNumber, err := strconv.Atoi(r.FormValue("order_number"))
+	if err != nil {
+		http.Error(w, "Error converting order number to int", http.StatusInternalServerError)
+		log.Println("Error converting order number to int: ", err)
+		return
+	}
+
+	if description != "" {
+		_, err := database.DB.Exec(`UPDATE course_task SET description = $1 WHERE id = $2`, description, taskID)
+		if err != nil {
+			http.Error(w, "Error updating data", http.StatusInternalServerError)
+			return
+		}
+	}
+
+	if orderNumber != 0 {
+		_, err = database.DB.Exec(`UPDATE course_task SET order_number = $1 WHERE id = $2`, orderNumber, taskID)
+		if err != nil {
+			http.Error(w, "Error updating data", http.StatusInternalServerError)
+			return
+		}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"message": "Task updated successfully",
+		"id": taskID,
 	})
 }
 

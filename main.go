@@ -53,10 +53,12 @@ func main() {
 
 	router.GET("/courses/:id/materials/", handlers.GETCourseMaterialsHandler)
 	router.POST("/courses/:id/materials-upload/:section_id/", handlers.POSTCourseMaterialsHandler)
+	router.PUT("/courses/:id/materials/:section_id/:material_id/", handlers.PUTCourseMaterialsHandler)
 	router.DELETE("/courses/:id/materials/:section_id/", handlers.DELETECourseMaterialsHandler)
 
 	router.GET("/courses/:id/tasks/", handlers.GETCourseTasksHandler)
 	router.POST("/courses/:id/tasks-upload/:section_id/", handlers.POSTCourseTasksHandler)
+	router.PUT("/courses/:id/tasks/:section_id/:task_id/", handlers.PUTCourseTasksHandler)
 	router.DELETE("/courses/:id/tasks/:section_id/", handlers.DELETECourseTasksHandler)
 
 	router.GET("/courses/", handlers.GETCoursesHandler)
