@@ -91,6 +91,7 @@ export const Auth = () => {
           password,
           bio: ''
         });
+        handleLogin();
         resetForm();
       } catch (error) {
         if (error instanceof AxiosError) {
