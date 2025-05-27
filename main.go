@@ -99,7 +99,7 @@ func main() {
 	router.DELETE("/task_reviews/:answer_id/", handlers.DELETETaskReviewHandler)
 
 	handler := cors.New(cors.Options{
-		AllowedOrigins: []string{"http://localhost:5173", "http://127.0.0.1:5173"},
+		AllowedOrigins: []string{"http://localhost:5173", "http://127.0.0.1:5173", "http://localhost:3000", "http://127.0.0.1:3000"},
 		AllowCredentials: true,
 		AllowedHeaders: []string{"Authorization", "Content-Type", "text/plain"},
 		AllowedMethods: []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
