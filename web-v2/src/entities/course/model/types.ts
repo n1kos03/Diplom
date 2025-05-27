@@ -56,11 +56,13 @@ export interface ICourseMaterial {
     description: string;
     created_at: string;
     section_id: number;
+    order_number: number;
 }
 
 export interface ICreateMaterialData {
     description: string;
     file: File;
+    order_number: number;
 }
 
 export interface IMaterialResponse {
@@ -90,11 +92,13 @@ export interface ICourseTask {
     content_url: string;
     description: string;
     created_at: string;
+    order_number: number;
 }
 
 export interface ICreateTaskData {
     description: string;
     file: File;
+    order_number: number;
 }
 
 export interface ITaskResponse {
