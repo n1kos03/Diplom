@@ -2,11 +2,11 @@
 import axios from 'axios';
 import type { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
 
 const createApiInstance = () => {
     const axiosInstance: AxiosInstance = axios.create({
-        baseURL: `${API_URL}/api/v1/`,
+        baseURL: `${API_URL}/`,
         timeout: 120000,
         headers: {
             'Content-Type': 'application/json',
@@ -16,7 +16,7 @@ const createApiInstance = () => {
 
     axiosInstance.interceptors.request.use(
         (config) => {
-            const accessToken = localStorage.getItem('accessToken');
+            const accessToken = localStorage.getItem('access_token');
             if (accessToken) {
                 config.headers.Authorization = `Bearer ${accessToken}`;
             }

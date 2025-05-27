@@ -4,8 +4,12 @@ import { useState } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
 import { userRepository } from 'entities/user/api';
 import { AxiosError } from 'axios';
+import { useNavigate } from 'react-router-dom';
+import { jwtDecode } from 'jwt-decode';
 
 export const Auth = () => {
+  const navigate = useNavigate();
+
   const [isLogin, setIsLogin] = useState(false);
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
@@ -51,21 +55,42 @@ export const Auth = () => {
     }
   };
 
+  const handleLogin = async () => {
+    try {
+      const response = await userRepository().login({
+        email,
+        password
+      });
+      
+      if (response.token) {
+        const decodedToken = jwtDecode(response.token);
+        localStorage.setItem('access_token', response.token);
+        localStorage.setItem('user', JSON.stringify(decodedToken));
+        navigate('/');
+      }
+    } catch (error) {
+      if (error instanceof AxiosError) {
+        setError(error.response?.data?.message || 'Ошибка при входе');
+      } else {
+        setError('Произошла неизвестная ошибка');
+      }
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
     if (isLogin) {
-      // TODO: Добавить логику входа
+      await handleLogin();
     } else {
       try {
         await userRepository().register({
           nickname: username,
           email,
           password,
-          bio: '' // Добавляем пустую биографию, так как она требуется по типу
+          bio: ''
         });
-        setIsLogin(true);
         resetForm();
       } catch (error) {
         if (error instanceof AxiosError) {
@@ -129,7 +154,7 @@ export const Auth = () => {
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
                     placeholder="Введите никнейм"
-                    className="w-full px-4 py-3 bg-[#1a1a1a] border border-gray-800 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-600 focus:border-blue-600 text-white"
+                    className="w-full px-4 py-3 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-600 focus:border-blue-600 text-gray-900"
                   />
                 </div>
               )}
@@ -142,7 +167,7 @@ export const Auth = () => {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="Введите email"
-                  className="w-full px-4 py-3 bg-[#1a1a1a] border border-gray-800 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-600 focus:border-blue-600 text-white"
+                  className="w-full px-4 py-3 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-600 focus:border-blue-600 text-gray-900"
                 />
               </div>
 
@@ -155,7 +180,7 @@ export const Auth = () => {
                     value={password}
                     onChange={handlePasswordChange}
                     placeholder="••••••••••••••••"
-                    className="w-full px-4 py-3 bg-[#1a1a1a] border border-gray-800 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-600 focus:border-blue-600 text-white pr-10"
+                    className="w-full px-4 py-3 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-600 focus:border-blue-600 text-gray-900 pr-10"
                   />
                   <button
                     type="button"
@@ -187,7 +212,7 @@ export const Auth = () => {
                       value={confirmPassword}
                       onChange={handleConfirmPasswordChange}
                       placeholder="••••••••••••••••"
-                      className="w-full px-4 py-3 bg-[#1a1a1a] border border-gray-800 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-600 focus:border-blue-600 text-white pr-10"
+                      className="w-full px-4 py-3 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-600 focus:border-blue-600 text-gray-900 pr-10"
                     />
                   </div>
                   {passwordError && (

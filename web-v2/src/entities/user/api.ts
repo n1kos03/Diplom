@@ -16,7 +16,11 @@ export const userRepository = () => {
         },
 
         register(userData: IRegisterUserData): Promise<IUserResponse> {
-            return apiInstance.post("/users", userData);
+            return apiInstance.post("/users/registration", userData);
+        },
+
+        login(userData: { email: string; password: string }): Promise<IUserResponse> {
+            return apiInstance.post("/login", userData);
         },
 
         updateUser(id: number, userData: IUpdateUserData): Promise<IUserResponse> {

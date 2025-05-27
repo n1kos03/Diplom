@@ -22,8 +22,9 @@ export interface IUpdateUserData {
 export interface IUserResponse {
     message: string;
     id: number;
-    nickname?: string;
-    bio?: string;
+    nickname: string;
+    bio: string;
+    token: string;
 }
 
 export interface IUserPhoto {

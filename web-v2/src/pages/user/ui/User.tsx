@@ -1,26 +1,14 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Tabs } from "shared/ui/tabs/Tabs"
 import { Card, CardContent } from "shared/ui/card"
 import { StarRating } from "shared/ui/rating/StarRating"
-import { Link } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import { Modal } from "shared/ui/modal"
 import { Input } from "shared/ui/input"
-
-const user = {
-    name: "Nikita",
-    verified: true,
-    company: "Htmlstream",
-    location: "San Francisco, US",
-    joined: "March 2017",
-    avatar: "https://ui-avatars.com/api/?name=Ella+Lauda&background=cccccc&color=222222&size=256",
-}
-
-// Примерная имитация авторизации
-const isLoggedIn = true;
-const userMini = {
-    name: "Никита",
-    avatar: "https://ui-avatars.com/api/?name=Ella+Lauda&background=cccccc&color=222222&size=64",
-}
+import { Header } from "shared/ui/header/Header"
+import { Avatar } from "shared/ui/avatar/Avatar"
+import { userRepository } from "entities/user/api"
+import type { IUser, IUpdateUserData } from "entities/user/model/types"
 
 // Примерные фото
 const photos = [
@@ -58,35 +46,6 @@ const courses = [
     },
 ]
 
-function Avatar({ alt, size = 32 }: { alt: string; size?: number }) {
-    const px = `${size}px`;
-    return (
-        <div
-            className="rounded-full border-4 border-white overflow-hidden bg-gray-200 flex items-center justify-center font-bold select-none"
-            style={{ width: px, height: px, fontSize: size / 2 }}
-        >
-            {alt?.[0]?.toUpperCase() || "?"}
-        </div>
-    )
-}
-
-function Header() {
-    return (
-        <header className="w-full flex items-center justify-between px-4 sm:px-8 py-4 bg-white/80 backdrop-blur border-b border-gray-100 z-50 h-16">
-            <div className="font-bold text-xl text-blue-700 tracking-tight">nikitosik</div>
-            <div className="flex items-center gap-2">
-                <button className="hidden sm:inline-flex items-center bg-blue-600 text-white font-semibold px-4 py-2 rounded-lg shadow hover:bg-blue-700 transition mr-2">
-                    Создать курс
-                </button>
-                {isLoggedIn ? (
-                    <Avatar alt={userMini.name} size={36} />
-                ) : (
-                    <button className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-5 py-2 rounded-xl shadow">Login</button>
-                )}
-            </div>
-        </header>
-    )
-}
 
 function CourseCard({ course }: { course: typeof courses[0] }) {
     const formattedDate = new Date(course.createdAt).toLocaleDateString("ru-RU", {
@@ -94,11 +53,6 @@ function CourseCard({ course }: { course: typeof courses[0] }) {
         month: "long",
         day: "numeric",
     })
-    const formattedPrice = new Intl.NumberFormat("ru-RU", {
-        style: "currency",
-        currency: "RUB",
-        minimumFractionDigits: 2,
-    }).format(course.price)
     return (
         <Card className="border-gray-200 overflow-hidden flex flex-col h-full">
             <CardContent className="pt-6 flex-grow">
@@ -139,14 +93,51 @@ function PhotoGrid() {
 }
 
 export const User = () => {
+    const { id } = useParams<{ id: string }>()
     const [activeTab, setActiveTab] = useState("photo")
     const [isEditModalOpen, setIsEditModalOpen] = useState(false)
-    const [editedName, setEditedName] = useState(user.name)
+    const [user, setUser] = useState<IUser | null>(null)
+    const [isLoading, setIsLoading] = useState(true)
+    const [editedName, setEditedName] = useState("")
 
-    const handleSaveName = () => {
-        // Здесь будет логика сохранения имени
-        user.name = editedName
-        setIsEditModalOpen(false)
+    useEffect(() => {
+        const fetchUser = async () => {
+            try {
+                if (!id) return
+                const userData = await userRepository().getUserById(Number(id))
+                setUser(userData)
+                setEditedName(userData.nickname)
+            } catch (error) {
+                console.error('Ошибка при получении данных пользователя:', error)
+            } finally {
+                setIsLoading(false)
+            }
+        }
+
+        fetchUser()
+    }, [id])
+
+    const handleSaveName = async () => {
+        if (!user || !id) return
+
+        try {
+            const updateData: IUpdateUserData = {
+                nickname: editedName
+            }
+            await userRepository().updateUser(Number(id), updateData)
+            setUser(prev => prev ? { ...prev, nickname: editedName } : null)
+            setIsEditModalOpen(false)
+        } catch (error) {
+            console.error('Ошибка при обновлении имени:', error)
+        }
+    }
+
+    if (isLoading) {
+        return <div className="min-h-screen flex items-center justify-center">Загрузка...</div>
+    }
+
+    if (!user) {
+        return <div className="min-h-screen flex items-center justify-center">Пользователь не найден</div>
     }
 
     const tabs = [
@@ -185,7 +176,7 @@ export const User = () => {
                         className="absolute left-1/2 -translate-y-[50px] sm:-translate-y-1/2 -translate-x-1/2 z-10"
                         style={{ top: `-${avatarSize / 2}px` }}
                     >
-                        <Avatar alt={user.name} size={avatarSize} />
+                        <Avatar alt={user.nickname} size={avatarSize} />
                     </div>
                     <div className="bg-white rounded-t-3xl pt-16 sm:pt-20 pb-8 px-4 sm:px-8 mt-[-48px] sm:mt-[-64px] flex flex-col items-center relative z-0 w-full flex-1 min-h-0">
                         <div className="relative w-full">
@@ -195,7 +186,7 @@ export const User = () => {
                         </div>
                         <div className="relative w-full">
                             <div className="flex flex-col items-center mb-4">
-                                <h1 className="mb-6 text-2xl sm:text-3xl font-bold">{user.name}</h1>
+                                <h1 className="mb-6 text-2xl sm:text-3xl font-bold">{user.nickname}</h1>
                                 <div className="w-full flex flex-col items-center justify-center sm:flex-row gap-2">
                                     <button
                                         className="

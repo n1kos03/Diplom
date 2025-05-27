@@ -2,7 +2,9 @@ import { useState } from "react"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "shared/ui/accordion"
 import { Input } from "shared/ui/input"
 import { Plus, Trash2, FileText, Video, Paperclip, ChevronDown, ChevronUp } from "lucide-react"
-import { Link } from "react-router-dom"
+import { Link, useNavigate } from "react-router-dom"
+import { courseRepository } from "entities/course/api"
+import { Header } from "widgets/header"
 
 // Типы
 function genId() { return Math.random().toString(36).slice(2, 10) }
@@ -12,58 +14,26 @@ type Block = {
     title: string
     type: "video" | "document"
     description?: string
-    files?: { name: string, url: string }[]
+    files?: File[]
 }
 
 type Section = {
     id: string
     title: string
     blocks: Block[]
-}
-
-const isLoggedIn = true;
-const userMini = {
-    name: "Никита",
-    avatar: "https://ui-avatars.com/api/?name=Ella+Lauda&background=cccccc&color=222222&size=64",
-}
-
-function Avatar({ alt, size = 32 }: { alt: string; size?: number }) {
-    const px = `${size}px`;
-    return (
-        <div
-            className="rounded-full border-4 border-white overflow-hidden bg-gray-200 flex items-center justify-center font-bold select-none"
-            style={{ width: px, height: px, fontSize: size / 2 }}
-        >
-            {alt?.[0]?.toUpperCase() || "?"}
-        </div>
-    )
-}
-
-function Header() {
-    return (
-        <header className="w-full flex items-center justify-between px-4 sm:px-8 py-4 bg-white/80 backdrop-blur border-b border-gray-100 z-50 h-16">
-            <div className="font-bold text-xl text-blue-700 tracking-tight">nikitosik</div>
-            <div className="flex items-center gap-2">
-                {isLoggedIn ? (
-                    <Link to="/user" className="flex items-center gap-2 cursor-pointer">
-                        <span className="text-sm font-medium">{userMini.name}</span>
-                        <Avatar alt={userMini.name} size={36} />
-                    </Link>
-                ) : (
-                    <button className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-5 py-2 rounded-xl shadow">Login</button>
-                )}
-            </div>
-        </header>
-    )
+    apiId?: number
 }
 
 export const AddCourse = () => {
+    const navigate = useNavigate()
     const [title, setTitle] = useState("")
     const [description, setDescription] = useState("")
     const [sections, setSections] = useState<Section[]>([])
     const [expandedSection, setExpandedSection] = useState<string | null>(null)
     const [openBlocks, setOpenBlocks] = useState<{ [blockId: string]: boolean }>({})
     const [selectedFiles, setSelectedFiles] = useState<{ [blockId: string]: File | null }>({})
+    const [isSaving, setIsSaving] = useState(false)
+    const [error, setError] = useState<string | null>(null)
 
     // Добавить раздел
     const addSection = () => {
@@ -123,10 +93,9 @@ export const AddCourse = () => {
 
     // Добавить файл к блоку
     const addBlockFile = (sectionId: string, blockId: string, file: File) => {
-        const url = URL.createObjectURL(file)
         setSections(sections.map(s =>
             s.id === sectionId
-                ? { ...s, blocks: s.blocks.map(b => b.id === blockId ? { ...b, files: [...(b.files || []), { name: file.name, url }] } : b) }
+                ? { ...s, blocks: s.blocks.map(b => b.id === blockId ? { ...b, files: [file] } : b) }
                 : s
         ))
     }
@@ -140,12 +109,83 @@ export const AddCourse = () => {
         ))
     }
 
+    const saveCourse = async () => {
+        if (!title || !description) {
+            setError("Пожалуйста, заполните название и описание курса")
+            return
+        }
+
+        if (sections.length === 0) {
+            setError("Добавьте хотя бы один раздел")
+            return
+        }
+
+        setIsSaving(true)
+        setError(null)
+
+        try {
+            // 1. Создаем курс
+            const courseResponse = await courseRepository().createCourse({
+                title,
+                description
+            })
+            const courseId = courseResponse.id
+
+            // 2. Создаем все секции параллельно
+            const sectionPromises = sections.map(async (section) => {
+                const sectionResponse = await courseRepository().createSection(courseId, {
+                    title: section.title,
+                    description: ""
+                })
+                return { ...section, apiId: sectionResponse.id }
+            })
+            const createdSections = await Promise.all(sectionPromises)
+
+            // 3. Загружаем все материалы и задания параллельно
+            const uploadPromises = createdSections.flatMap(section => 
+                section.blocks.map(async (block) => {
+                    if (!block.files || block.files.length === 0) return
+
+                    const file = block.files[0] // Берем первый файл
+                    const formData = new FormData()
+                    formData.append('file', file)
+                    formData.append('description', block.description || '')
+
+                    if (block.type === 'document') {
+                        // Загружаем как задание
+                        const response = await fetch(`/courses/${courseId}/tasks/${section.apiId}`, {
+                            method: 'POST',
+                            body: formData
+                        })
+                        return response.json()
+                    } else {
+                        // Загружаем как материал
+                        const response = await fetch(`/courses/${courseId}/materials/${section.apiId}`, {
+                            method: 'POST',
+                            body: formData
+                        })
+                        return response.json()
+                    }
+                })
+            )
+
+            await Promise.all(uploadPromises)
+
+            // 4. Перенаправляем на страницу курса
+            navigate(`/course/${courseId}`)
+        } catch (err) {
+            console.error('Ошибка при сохранении курса:', err)
+            setError("Произошла ошибка при сохранении курса. Пожалуйста, попробуйте еще раз.")
+        } finally {
+            setIsSaving(false)
+        }
+    }
+
     return (
         <>
             <Header />
 
             <div className="flex flex-col w-full h-full">
-
                 <div className="relative w-full p-4 z-0">
                     <div className="absolute top-0 left-0 w-full p-4 bg-blue-600 h-40 z-0">
                         <Link to="/" className="inline-flex items-center text-white font-bold text-base">
@@ -176,13 +216,22 @@ export const AddCourse = () => {
                             </div>
                             <div className="mb-4 flex justify-between items-center">
                                 <h2 className="text-2xl font-semibold">Содержание курса</h2>
-                                <button onClick={addSection} className="flex items-center gap-1 text-xs text-blue-600 font-medium bg-blue-100 px-3 py-2 rounded-md cursor-pointer hover:bg-blue-200 transition">
+                                <div 
+                                    onClick={addSection} 
+                                    className="flex items-center gap-1 text-xs text-blue-600 font-medium bg-blue-100 px-3 py-2 rounded-md cursor-pointer hover:bg-blue-200 transition"
+                                >
                                     <Plus className="w-4 h-4" /> Добавить раздел
-                                </button>
+                                </div>
                             </div>
 
                             {sections.length ? (
-                                <Accordion type="single" collapsible value={expandedSection || undefined} onValueChange={setExpandedSection as any} className="rounded-xl flex flex-col gap-2">
+                                <Accordion 
+                                    type="single" 
+                                    collapsible 
+                                    value={expandedSection || undefined} 
+                                    onValueChange={(value: string | undefined) => setExpandedSection(value || null)} 
+                                    className="rounded-xl flex flex-col gap-2"
+                                >
                                     {sections.map((section) => (
                                         <AccordionItem value={section.id} key={section.id} className="border border-gray-200 rounded-xl overflow-hidden">
                                             <AccordionTrigger className="px-4 py-3 hover:no-underline cursor-pointer">
@@ -192,12 +241,18 @@ export const AddCourse = () => {
                                                         value={section.title}
                                                         onChange={e => editSectionTitle(section.id, e.target.value)}
                                                     />
-                                                    <button onClick={e => { e.stopPropagation(); addBlock(section.id) }} className="flex items-center gap-1 text-xs text-indigo-600 bg-indigo-100 px-2 py-1 rounded-md cursor-pointer hover:bg-indigo-200 transition">
+                                                    <div 
+                                                        onClick={e => { e.stopPropagation(); addBlock(section.id) }} 
+                                                        className="flex items-center gap-1 text-xs text-indigo-600 bg-indigo-100 px-2 py-1 rounded-md cursor-pointer hover:bg-indigo-200 transition"
+                                                    >
                                                         <Plus className="w-4 h-4" /> Блок
-                                                    </button>
-                                                    <button onClick={e => { e.stopPropagation(); removeSection(section.id) }} className="mr-2 flex items-center gap-1 text-xs text-red-600 bg-red-100 px-2 py-1 rounded-md cursor-pointer hover:bg-red-200 transition">
+                                                    </div>
+                                                    <div 
+                                                        onClick={e => { e.stopPropagation(); removeSection(section.id) }} 
+                                                        className="mr-2 flex items-center gap-1 text-xs text-red-600 bg-red-100 px-2 py-1 rounded-md cursor-pointer hover:bg-red-200 transition"
+                                                    >
                                                         <Trash2 className="w-4 h-4" />
-                                                    </button>
+                                                    </div>
                                                 </div>
                                             </AccordionTrigger>
                                             <AccordionContent className="px-0">
@@ -226,9 +281,12 @@ export const AddCourse = () => {
                                                                         <option value="video">Лекция</option>
                                                                         <option value="document">Задание</option>
                                                                     </select>
-                                                                    <button onClick={e => { e.stopPropagation(); removeBlock(section.id, block.id) }} className="-mr-2 flex items-center gap-1 text-xs text-red-600 bg-red-100 px-2 py-1 rounded-md cursor-pointer hover:bg-red-200 transition">
+                                                                    <div 
+                                                                        onClick={e => { e.stopPropagation(); removeBlock(section.id, block.id) }} 
+                                                                        className="-mr-2 flex items-center gap-1 text-xs text-red-600 bg-red-100 px-2 py-1 rounded-md cursor-pointer hover:bg-red-200 transition"
+                                                                    >
                                                                         <Trash2 className="w-4 h-4" />
-                                                                    </button>
+                                                                    </div>
                                                                     {isOpen ? <ChevronUp className="w-4 h-4 text-gray-400 ml-2" /> : <ChevronDown className="w-4 h-4 text-gray-400 ml-2" />}
                                                                 </div>
                                                                 {isOpen && (
@@ -254,24 +312,29 @@ export const AddCourse = () => {
                                                                                 />
                                                                             </label>
                                                                             {selectedFiles[block.id] && (
-                                                                                <button
-                                                                                    className="text-xs text-green-700 bg-green-100 px-2 py-1 rounded hover:bg-green-200 ml-2"
+                                                                                <div
+                                                                                    className="text-xs text-green-700 bg-green-100 px-2 py-1 rounded hover:bg-green-200 ml-2 cursor-pointer"
                                                                                     onClick={() => {
                                                                                         addBlockFile(section.id, block.id, selectedFiles[block.id]!)
                                                                                         setSelectedFiles(prev => ({ ...prev, [block.id]: null }))
                                                                                     }}
                                                                                 >
                                                                                     Добавить: {selectedFiles[block.id]?.name}
-                                                                                </button>
+                                                                                </div>
                                                                             )}
                                                                         </div>
                                                                         {block.files && block.files.length > 0 && (
                                                                             <ul className="mb-2">
                                                                                 {block.files.map((file, i) => (
-                                                                                    <li key={file.url} className="flex items-center gap-2 text-sm">
+                                                                                    <li key={file.name} className="flex items-center gap-2 text-sm">
                                                                                         <FileText className="w-4 h-4 text-gray-400" />
-                                                                                        <a href={file.url} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline truncate max-w-[180px]">{file.name}</a>
-                                                                                        <button onClick={() => removeBlockFile(section.id, block.id, i)} className="text-xs text-red-600 ml-2 hover:underline">Удалить</button>
+                                                                                        <a href={URL.createObjectURL(file)} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline truncate max-w-[180px]">{file.name}</a>
+                                                                                        <div 
+                                                                                            onClick={() => removeBlockFile(section.id, block.id, i)} 
+                                                                                            className="text-xs text-red-600 ml-2 hover:underline cursor-pointer"
+                                                                                        >
+                                                                                            Удалить
+                                                                                        </div>
                                                                                     </li>
                                                                                 ))}
                                                                             </ul>
@@ -292,10 +355,22 @@ export const AddCourse = () => {
                                 </div>
                             )}
 
+                            {error && (
+                                <div className="fixed top-4 right-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+                                    {error}
+                                </div>
+                            )}
+
                             {sections.length > 0 && sections.every(section => section.blocks.length > 0) && (
                                 <div className="mt-4 flex justify-end">
-                                    <button className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2 rounded-lg shadow">
-                                        Создать курс
+                                    <button 
+                                        onClick={saveCourse}
+                                        disabled={isSaving}
+                                        className={`bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2 rounded-lg shadow ${
+                                            isSaving ? 'opacity-50 cursor-not-allowed' : ''
+                                        }`}
+                                    >
+                                        {isSaving ? 'Сохранение...' : 'Создать курс'}
                                     </button>
                                 </div>
                             )}

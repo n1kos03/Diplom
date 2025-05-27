@@ -1,137 +1,78 @@
 import { useEffect, useState } from "react"
 import { MoveLeft } from "lucide-react"
-
-// import { Button } from "shared/ui/button"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "shared/ui/accordion"
-// import { Heart } from "lucide-react"
 import { StarRating } from "shared/ui/rating"
 import { CommentsSection } from "entities/comment"
-import { Link } from "react-router-dom"
+import { Link, useParams } from "react-router-dom"
+import { Header } from "widgets/header"
+import { courseRepository } from "entities/course/api"
+import type { ICourse, ISection, ICourseMaterial, ICourseTask } from "entities/course/model/types"
 
-type Lecture = {
-    title: string
-    duration: string
-    isCompleted: boolean
-    type: "video" | "document"
-}
 
-type CourseSection = {
-    title: string
-    index: number
-    lectures: Lecture[]
-}
-
-const COURSE_SECTIONS: CourseSection[] = [
-    {
-        title: "Beginner - Introduction to UX designing",
-        index: 0,
-        lectures: [
-            { title: "Read before you start", duration: "02:53", isCompleted: true, type: "document" },
-            {
-                title: "Introduction to Figma essentials training course",
-                duration: "02:45",
-                isCompleted: true,
-                type: "video",
-            },
-            {
-                title: "What is the difference between UI & UX in Figma",
-                duration: "05:22",
-                isCompleted: true,
-                type: "video",
-            },
-            {
-                title: "What we are making in this Figma course",
-                duration: "09:18",
-                isCompleted: false,
-                type: "video",
-            },
-            {
-                title: "Class project 02- Create your own brief",
-                duration: "1 Question",
-                isCompleted: false,
-                type: "document",
-            },
-            {
-                title: "Class project 02- Create your own brief",
-                duration: "1 Question",
-                isCompleted: false,
-                type: "document",
-            },
-        ]
-
-    },
-    {
-        title: "Beginner - Introduction to UX designing",
-        index: 1,
-        lectures: [
-            { title: "Read before you start", duration: "02:53", isCompleted: true, type: "document" },
-            {
-                title: "Introduction to Figma essentials training course",
-                duration: "02:45",
-                isCompleted: true,
-                type: "video",
-            },
-        ]
-    },
-    {
-        title: "Beginner - Introduction to UX designing",
-        index: 2,
-        lectures: [
-            { title: "Read before you start", duration: "02:53", isCompleted: true, type: "document" },
-            {
-                title: "Introduction to Figma essentials training course",
-                duration: "02:45",
-                isCompleted: true,
-                type: "video",
-            },
-        ]
-    }
-]
-
-const isLoggedIn = true;
-const userMini = {
-    name: "Никита",
-    avatar: "https://ui-avatars.com/api/?name=Ella+Lauda&background=cccccc&color=222222&size=64",
-}
-
-function Avatar({ alt, size = 32 }: { alt: string; size?: number }) {
-    const px = `${size}px`;
-    return (
-        <div
-            className="rounded-full border-4 border-white overflow-hidden bg-gray-200 flex items-center justify-center font-bold select-none"
-            style={{ width: px, height: px, fontSize: size / 2 }}
-        >
-            {alt?.[0]?.toUpperCase() || "?"}
-        </div>
-    )
-}
-
-function Header() {
-    return (
-        <header className="w-full flex items-center justify-between px-4 sm:px-8 py-4 bg-white/80 backdrop-blur border-b border-gray-100 z-50 h-16">
-            <div className="font-bold text-xl text-blue-700 tracking-tight">nikitosik</div>
-            <div className="flex items-center gap-2">
-                <Link to="/course/add" className="hidden sm:inline-flex items-center bg-blue-600 text-white font-semibold px-4 py-2 rounded-lg shadow hover:bg-blue-700 transition mr-2">
-                    Создать курс
-                </Link>
-                {isLoggedIn ? (
-                    <Avatar alt={userMini.name} size={36} />
-                ) : (
-                    <button className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-5 py-2 rounded-xl shadow">Login</button>
-                )}
-            </div>
-        </header>
-    )
-}
 
 export const Course = () => {
-    const [averageRating, setAverageRating] = useState<number | null>(null)
-
-    const [expandedBlock, setExpandedBlock] = useState<number | null>(null);
+    const { id } = useParams<{ id: string }>()
+    const [course, setCourse] = useState<ICourse | null>(null)
+    const [sections, setSections] = useState<ISection[]>([])
+    const [materials, setMaterials] = useState<ICourseMaterial[]>([])
+    const [tasks, setTasks] = useState<ICourseTask[]>([])
+    const [isLoading, setIsLoading] = useState(true)
+    const [error, setError] = useState<string | null>(null)
 
     useEffect(() => {
-        setAverageRating(4.6);
-    }, []);
+        const fetchCourseData = async () => {
+            if (!id) return
+            
+            try {
+                setIsLoading(true)
+                // Получаем основную информацию о курсе
+                const courseData = await courseRepository().getCourseById(Number(id))
+                setCourse(courseData)
+
+                // Получаем секции курса
+                const sectionsData = await courseRepository().getSections(Number(id))
+                setSections(sectionsData)
+
+                // Получаем материалы и задания для каждой секции
+                const materialsData = await courseRepository().getMaterials(Number(id))
+                const tasksData = await courseRepository().getTasks(Number(id))
+
+                // Объединяем все материалы и задания
+                setMaterials(materialsData)
+                setTasks(tasksData)
+
+            } catch (err) {
+                console.error('Ошибка при загрузке данных курса:', err)
+                setError('Не удалось загрузить информацию о курсе')
+            } finally {
+                setIsLoading(false)
+            }
+        }
+
+        fetchCourseData()
+    }, [id])
+
+    if (isLoading) {
+        return (
+            <>
+                <Header />
+                <div className="container mx-auto px-4 py-8 max-w-7xl">
+                    <div className="text-center">Загрузка курса...</div>
+                </div>
+            </>
+        )
+    }
+
+    if (error || !course) {
+        return (
+            <>
+                <Header />
+                <div className="container mx-auto px-4 py-8 max-w-7xl">
+                    <div className="text-center text-red-500">{error || 'Курс не найден'}</div>
+                </div>
+            </>
+        )
+    }
 
     return (
         <>
@@ -147,7 +88,7 @@ export const Course = () => {
                     <div className="">
                         {/* Course Title */}
                         <div className="flex items-center justify-between md:flex-row flex-col md:mb-0 mb-4">
-                            <h1 className="text-3xl font-bold mb-4">Новый курс Никиты Kimbratr по фронтенду</h1>
+                            <h1 className="text-3xl font-bold mb-4">{course.title}</h1>
                             <button className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg cursor-pointer md:w-auto w-full">
                                 Подписаться
                             </button>
@@ -156,27 +97,25 @@ export const Course = () => {
                         {/* Course Meta */}
                         <div className="flex flex-wrap items-center gap-4 mb-6">
                             <div className="flex items-center">
-                                <span className="font-semibold">Никита Kimbratr</span>
+                                <span className="font-semibold">{course.author_name}</span>
                             </div>
+
+                            {/* <div className="flex items-center">
+                                <span>{formatNumber(course.subscribers_count || 0)} подписчиков</span>
+                            </div> */}
 
                             <div className="flex items-center">
-                                <span>{formatNumber(12)} подписчиков</span>
+                                <StarRating rating={course.rating} totalStars={5} />
+                                {/* <span className="ml-2">
+                                    {course.rating} ({formatNumber(course.ratings_count || 0)} оценок)
+                                </span> */}
                             </div>
-
-                            {averageRating && (
-                                <div className="flex items-center">
-                                    <StarRating rating={averageRating} totalStars={5} />
-                                    <span className="ml-2">
-                                        {averageRating} ({formatNumber(8)} оценок)
-                                    </span>
-                                </div>
-                            )}
                         </div>
 
                         {/* Course Description */}
                         <div className="mb-8">
                             <p className="text-gray-700">
-                                Это практикоориентированный курс, где вы шаг за шагом освоите HTML, CSS и JavaScript, научитесь строить адаптивные и отзывчивые интерфейсы, разберётесь с компонентным подходом и современными фреймворками, такими как React. Вместе мы превратим сухой код в живые приложения, научим вас мыслить как разработчик и подготовим к реальной работе в команде.
+                                {course.description}
                             </p>
                         </div>
 
@@ -184,18 +123,42 @@ export const Course = () => {
                         <div className="mb-8">
                             <h2 className="text-2xl font-bold mb-2">Содержание курса</h2>
                             <div className="flex items-center justify-between mb-4">
-                                <div className="text-sm text-gray-600">{COURSE_SECTIONS.length} {COURSE_SECTIONS.length > 1 ? "разделов" : "раздел"} • {COURSE_SECTIONS.reduce((acc, section) => acc + section.lectures.filter(lecture => lecture.type === "video").length, 0)} {COURSE_SECTIONS.reduce((acc, section) => acc + section.lectures.filter(lecture => lecture.type === "video").length, 0) > 1 ? "лекций" : "лекция"} • {COURSE_SECTIONS.reduce((acc, section) => acc + section.lectures.filter(lecture => lecture.type === "document").length, 0)} {COURSE_SECTIONS.reduce((acc, section) => acc + section.lectures.filter(lecture => lecture.type === "document").length, 0) > 1 ? "домашних заданий" : "домашнее задание"}</div>
-                                <Link to="/course/edit" className="text-xs text-blue-600 font-medium bg-blue-100 px-2 py-1 rounded-md cursor-pointer hover:bg-blue-200">Редактировать курс</Link>
+                                <div className="text-sm text-gray-600">
+                                    {sections?.length || 0} {sections?.length === 1 ? "раздел" : "разделов"} &nbsp;•&nbsp; 
+                                    {materials?.length || 0} {materials?.length === 1 ? "лекция" : "лекций"} &nbsp;•&nbsp; 
+                                    {tasks?.length || 0} {tasks?.length === 1 ? "домашнее задание" : "домашних заданий"}
+                                </div>
+                                <Link to={`/course/edit/${course?.id}`} className="text-xs text-blue-600 font-medium bg-blue-100 px-2 py-1 rounded-md cursor-pointer hover:bg-blue-200">Редактировать курс</Link>
                             </div>
 
-                            <Accordion type="single" collapsible onValueChange={(value) => {
-                                if (!value) {
-                                    setExpandedBlock(null);
-                                }
-                            }} className="border border-gray-200 rounded-md">
-                                {COURSE_SECTIONS.map((section) => (
-                                    <CourseSection key={section.index} isExpanded={expandedBlock === section.index} onExpand={() => setExpandedBlock(section.index)} {...section} />
-                                ))}
+                            <Accordion type="single" collapsible className="border border-gray-200 rounded-md">
+                                {sections?.map((section, index) => {
+                                    const sectionMaterials = materials?.filter(m => m.section_id === section.id) || []
+                                    const sectionTasks = tasks?.filter(t => t.section_id === section.id) || []
+                                    
+                                    return (
+                                        <CourseSection 
+                                            key={section.id} 
+                                            index={index} 
+                                            title={section.title}
+                                            onExpand={() => {}}
+                                            lectures={[
+                                                ...sectionMaterials.map(material => ({
+                                                    title: material.description,
+                                                    duration: "0:00",
+                                                    isCompleted: false,
+                                                    type: "video" as const
+                                                })),
+                                                ...sectionTasks.map(task => ({
+                                                    title: task.description,
+                                                    duration: "0:00",
+                                                    isCompleted: false,
+                                                    type: "document" as const
+                                                }))
+                                            ]}
+                                        />
+                                    )
+                                })}
                             </Accordion>
                         </div>
 
@@ -234,7 +197,7 @@ function CourseSection({ index, title, onExpand, lectures = [] }: CourseSectionP
             <AccordionContent className="px-0">
                 <Accordion type="single" collapsible>
                     {lectures.map((block, index) => (
-                        <AccordionItem value={`lecture-${index}`} className="last:border-b-0">
+                        <AccordionItem key={index} value={`lecture-${index}`} className="last:border-b-0">
                             <AccordionTrigger className="px-4 py-3 font-medium hover:no-underline cursor-pointer">
                                 <div className="flex items-center gap-4">
                                     <span>{block.title}</span>
@@ -255,10 +218,9 @@ function CourseSection({ index, title, onExpand, lectures = [] }: CourseSectionP
                                         <p className="text-[15px] text-gray-800 font-bold">
                                             {block.type === "video" ? "Содержание лекции" : "Задание"}
                                         </p>
-                                        {/* {block.type === "document" && <button className="text-xs text-gray-600 font-medium bg-gray-100 px-2 py-1 rounded-md cursor-pointer hover:bg-gray-200">Прикрепить файл</button>} */}
                                     </div>
                                     <p className="text-[14px] text-gray-600">
-                                        Мы разберём ключевые приёмы, поделимся полезными лайфхаками и покажем, как превратить идеи в работающий продукт. Подходит как новичкам, так и тем, кто хочет освежить свои знания.
+                                        {block.title}
                                     </p>
                                 </div>
                             </AccordionContent>
@@ -268,8 +230,4 @@ function CourseSection({ index, title, onExpand, lectures = [] }: CourseSectionP
             </AccordionContent>
         </AccordionItem>
     )
-}
-
-function formatNumber(num: number): string {
-    return new Intl.NumberFormat().format(num)
 }
