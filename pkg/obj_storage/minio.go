@@ -50,9 +50,9 @@ func CreateBucketIfNotExists(client *minio.Client, bucketName string) error {
 func FormatBucketName(name string, prefixDef int) string {
 	var prefixName string
 	if prefixDef == 0 {
-		prefixName = "course-materials"
+		prefixName = "course"
 	} else if prefixDef == 1 {
-		prefixName = "user-photos"
+		prefixName = "user"
 	}
 	bucket := fmt.Sprintf("%s-%s", prefixName, name)
 	bucket = strings.ReplaceAll(bucket, " ", "-")

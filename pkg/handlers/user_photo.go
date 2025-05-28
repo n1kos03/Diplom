@@ -87,15 +87,7 @@ func POSTUserPhotoHandler(w http.ResponseWriter, r *http.Request, ps httprouter.
 	}
 	defer file.Close()
 
-	var userName string
-
-	err = database.DB.QueryRow(`SELECT "Nickname" FROM "User" WHERE "ID" = $1`, userID).Scan(&userName)
-	if err != nil {
-		http.Error(w, "Error getting user name", http.StatusNotFound)
-		return
-	}
-
-	bucketName := objStor.FormatBucketName(userName, 1)
+	bucketName := objStor.FormatBucketName(ps.ByName("id"), 1)
 	
 	err = objStor.CreateBucketIfNotExists(objStor.MinioClient, bucketName)
 	if err != nil {

@@ -92,11 +92,11 @@ func POSTUserAnswerHandler(w http.ResponseWriter, r *http.Request, ps httprouter
 	}
 
 	// Take parameters and file
-	courseID, err :=  strconv.Atoi(ps.ByName("id"))
-	if err != nil {
-		http.Error(w, "Error converting course ID to int", http.StatusInternalServerError)
-		return
-	}
+	// courseID, err :=  strconv.Atoi(ps.ByName("id"))
+	// if err != nil {
+	// 	http.Error(w, "Error converting course ID to int", http.StatusInternalServerError)
+	// 	return
+	// }
 	taskID, err :=  strconv.Atoi(ps.ByName("task_id"))
 	if err != nil {
 		http.Error(w, "Error converting course ID to int", http.StatusInternalServerError)
@@ -110,14 +110,7 @@ func POSTUserAnswerHandler(w http.ResponseWriter, r *http.Request, ps httprouter
 	}
 	defer file.Close()
 
-	var courseName string
-	err = database.DB.QueryRow(`SELECT "Title" FROM "Course" WHERE "ID" = $1`, courseID).Scan(&courseName)
-	if err != nil {
-		http.Error(w, "Error getting course name", http.StatusNotFound)
-		return
-	}
-
-	bucketName := objStor.FormatBucketName(courseName, 0)
+	bucketName := objStor.FormatBucketName(ps.ByName("id"), 0)
 
 	err = objStor.CreateBucketIfNotExists(objStor.MinioClient, bucketName)
 	if err != nil {
@@ -141,6 +134,7 @@ func POSTUserAnswerHandler(w http.ResponseWriter, r *http.Request, ps httprouter
 	_, err = database.DB.Exec(`INSERT INTO user_answer (task_id, user_id, content_url) VALUES ($1, $2, $3)`, taskID, userID, fileURL)
 	if err != nil {
 		http.Error(w, "Error inserting data", http.StatusInternalServerError)
+		log.Println("Error inserting data: ", err)
 		return
 	}
 

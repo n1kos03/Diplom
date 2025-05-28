@@ -113,14 +113,7 @@ func POSTCourseTasksHandler(w http.ResponseWriter, r *http.Request, ps httproute
 	}
 	defer file.Close()
 
-	var courseName string
-	err = database.DB.QueryRow(`SELECT "Title" FROM "Course" WHERE "ID" = $1`, courseID).Scan(&courseName)
-	if err != nil {
-		http.Error(w, "Error getting course name", http.StatusNotFound)
-		return
-	}
-
-	bucketName := objStor.FormatBucketName(courseName, 0)
+	bucketName := objStor.FormatBucketName(ps.ByName("id"), 0)
 
 	err = objStor.CreateBucketIfNotExists(objStor.MinioClient, bucketName)
 	if err != nil {
