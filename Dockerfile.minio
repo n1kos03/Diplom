@@ -1,0 +1,12 @@
+FROM minio/minio:latest
+
+# Устанавливаем только mc (без зависимостей)
+RUN curl -sLo /usr/bin/mc https://dl.min.io/client/mc/release/linux-amd64/mc && \
+    chmod +x /usr/bin/mc
+
+# Копируем скрипт инициализации
+COPY init-minio.sh /init-minio.sh
+RUN chmod +x /init-minio.sh
+
+# Заменяем entrypoint
+ENTRYPOINT ["/init-minio.sh"]
