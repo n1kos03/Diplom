@@ -30,8 +30,7 @@ services:
     env_file:
       - ./conf/minio.env
     volumes:
-      - ./conf/minio_data:/data
-      - ./conf/mc:/root/.mc
+      - minio-data:/data
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
       interval: 30s
@@ -40,3 +39,4 @@ services:
 
 volumes:
   pg_data:
+  minio-data:
