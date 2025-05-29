@@ -66,6 +66,7 @@ type Section struct {
 	CourseID int `json:"course_id"`
 	Title string `json:"title"`
 	Description string `json:"description"`
+	OrderNumber int `json:"order_number"`
 }
 
 type CourseTask struct {

@@ -35,7 +35,7 @@ func GETSectionHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Par
 
 	for rows.Next() {
 		var section models.Section
-		err = rows.Scan(&section.ID, &section.CourseID, &section.Title, &section.Description)
+		err = rows.Scan(&section.ID, &section.CourseID, &section.Title, &section.Description, &section.OrderNumber)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -75,7 +75,7 @@ func POSTSectionHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Pa
 		return
 	}
 
-	err = database.DB.QueryRow("INSERT INTO section (course_id, title, description) VALUES ($1, $2, $3) RETURNING id", courseID, section.Title, section.Description).Scan(&section.ID)
+	err = database.DB.QueryRow("INSERT INTO section (course_id, title, description, order_number) VALUES ($1, $2, $3, $4) RETURNING id", courseID, section.Title, section.Description, section.OrderNumber).Scan(&section.ID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -111,7 +111,7 @@ func PUTSectionHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Par
 	}
 
 	if section.Title != "" {
-		_, err = database.DB.Exec("UPDATE section SET title = $1 WHERE id = $2", section.Title, sectionID)
+		_, err = database.DB.Exec(`UPDATE section SET title = $1 WHERE id = $2`, section.Title, sectionID) 
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -119,7 +119,15 @@ func PUTSectionHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Par
 	}
 
 	if section.Description != "" {
-		_, err = database.DB.Exec("UPDATE section SET description = $1 WHERE id = $2", section.Description, sectionID)
+		_, err = database.DB.Exec(`UPDATE section SET description = $1 WHERE id = $2`, section.Description, sectionID)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
+
+	if section.OrderNumber != 0 {
+		_, err = database.DB.Exec(`UPDATE section SET order_number = $1 WHERE id = $2`, section.OrderNumber, sectionID) 
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return

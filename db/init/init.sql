@@ -98,7 +98,8 @@ CREATE TABLE public.section (
     id SERIAL PRIMARY KEY,
     course_id BIGINT REFERENCES public."Course"("ID") ON DELETE CASCADE,
     title TEXT NOT NULL,
-    description TEXT
+    description TEXT,
+    order_number INTEGER
 );
 
 CREATE TABLE public.course_task (
