@@ -1,54 +1,19 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Tabs } from "shared/ui/tabs/Tabs"
 import { Card, CardContent } from "shared/ui/card"
 import { StarRating } from "shared/ui/rating/StarRating"
 import { Link, useParams } from "react-router-dom";
 import { Modal } from "shared/ui/modal"
 import { Input } from "shared/ui/input"
-import { Header } from "shared/ui/header/Header"
+import { Header } from "widgets/header"
 import { Avatar } from "shared/ui/avatar/Avatar"
 import { userRepository } from "entities/user/api"
-import type { IUser, IUpdateUserData } from "entities/user/model/types"
+import { courseRepository } from "entities/course/api"
+import type { IUser, IUpdateUserData, IUserPhoto } from "entities/user/model/types"
+import type { ICourse } from "entities/course/model/types"
 
-// Примерные фото
-const photos = [
-    "https://21-school.ru/_next/image?url=https%3A%2F%2Fback.21-school.ru%2Fstorage%2Fimages%2FMd8sEkMbWksObje0Pl97BmGri7SFQHgigxUF8c75.jpg&w=1920&q=75",
-    "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=facearea&w=400&h=400&q=80",
-    "https://images.unsplash.com/photo-1511367461989-f85a21fda167?auto=format&fit=facearea&w=400&h=400&q=80",
-    "https://images.unsplash.com/photo-1517048676732-d65bc937f952?q=80&w=2940&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-]
-
-// Примерные курсы
-const courses = [
-    {
-        id: 1,
-        title: "Полный продвинутый 6-недельный буткемп по UI/UX дизайну",
-        author: "Доктор Марли Батор",
-        description:
-            "Наш 6-недельный буткемп по UI/UX дает студентам необходимые навыки для успешной карьеры дизайнера. Учитесь на практике с экспертами индустрии.",
-        category: "РАЗРАБОТКА",
-        rating: 4.9,
-        students: 1936922,
-        price: 549.0,
-        createdAt: "2025-01-15",
-    },
-    {
-        id: 2,
-        title: "SQL для новичков 2025: Интенсивный курс выходного дня",
-        author: "Эмма Родригес",
-        description:
-            "Освойте основы SQL за выходные. Идеально подходит для начинающих, которые хотят быстро изучить навыки работы с базами данных для своих проектов или карьеры.",
-        category: "РАЗРАБОТКА",
-        rating: 4.5,
-        students: 435671,
-        price: 13.0,
-        createdAt: "2025-02-20",
-    },
-]
-
-
-function CourseCard({ course }: { course: typeof courses[0] }) {
-    const formattedDate = new Date(course.createdAt).toLocaleDateString("ru-RU", {
+function CourseCard({ course }: { course: ICourse }) {
+    const formattedDate = new Date(course.created_at).toLocaleDateString("ru-RU", {
         year: "numeric",
         month: "long",
         day: "numeric",
@@ -65,7 +30,7 @@ function CourseCard({ course }: { course: typeof courses[0] }) {
                 <h3 className="font-bold text-lg mb-2 line-clamp-2">{course.title}</h3>
                 <p className="text-gray-600 text-sm mb-4 line-clamp-3">{course.description}</p>
                 <div className="text-sm text-gray-500 mb-2">
-                    <span>Автор: {course.author}</span>
+                    <span>Автор: {course.author_name}</span>
                 </div>
                 <div className="text-xs text-gray-400">
                     <span>Создано: {formattedDate}</span>
@@ -73,19 +38,27 @@ function CourseCard({ course }: { course: typeof courses[0] }) {
             </CardContent>
             <div className="border-t border-gray-200 pt-4 flex justify-between items-center px-6 pb-4">
                 <div className="flex items-center text-sm text-gray-500">
-                    <span>{course.students.toLocaleString()} {course.students > 1 ? "студентов" : "студента"}</span>
+                    <span>{course.subscribers_count || 0} {course.subscribers_count === 1 ? "подписчик" : "подписчиков"}</span>
                 </div>
             </div>
         </Card>
     )
 }
 
-function PhotoGrid() {
+function PhotoGrid({ photos }: { photos: IUserPhoto[] }) {
+    if (!photos || photos.length === 0) {
+        return (
+            <div className="text-center py-8 text-gray-500">
+                Нет доступных фотографий
+            </div>
+        );
+    }
+
     return (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 mt-8">
-            {photos.map((src, i) => (
-                <div key={i} className="aspect-square rounded-xl overflow-hidden bg-gray-100 flex items-center justify-center">
-                    <img src={src} alt="Фото" className="object-cover w-full h-full" />
+            {photos.map((photo) => (
+                <div key={photo.id} className="aspect-square rounded-xl overflow-hidden bg-gray-100 flex items-center justify-center">
+                    <img src={photo.content_url} alt="Фото пользователя" className="object-cover w-full h-full" />
                 </div>
             ))}
         </div>
@@ -99,6 +72,9 @@ export const User = () => {
     const [user, setUser] = useState<IUser | null>(null)
     const [isLoading, setIsLoading] = useState(true)
     const [editedName, setEditedName] = useState("")
+    const [userPhotos, setUserPhotos] = useState<IUserPhoto[]>([]);
+    const [userCourses, setUserCourses] = useState<ICourse[]>([]);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
         const fetchUser = async () => {
@@ -107,6 +83,8 @@ export const User = () => {
                 const userData = await userRepository().getUserById(Number(id))
                 setUser(userData)
                 setEditedName(userData.nickname)
+                await fetchUserPhotos();
+                await fetchUserCourses();
             } catch (error) {
                 console.error('Ошибка при получении данных пользователя:', error)
             } finally {
@@ -116,6 +94,28 @@ export const User = () => {
 
         fetchUser()
     }, [id])
+
+    const fetchUserPhotos = async () => {
+        try {
+            if (!id) return;
+            const photos = await userRepository().getUserPhotos(Number(id));
+            setUserPhotos(photos);
+        } catch (error) {
+            console.error('Ошибка при получении фото пользователя:', error);
+        }
+    };
+
+    const fetchUserCourses = async () => {
+        try {
+            if (!id) return;
+            const allCourses = await courseRepository().getAllCourses();
+            // Фильтруем курсы, где пользователь является автором
+            const userCourses = allCourses.filter(course => course.author_id === Number(id));
+            setUserCourses(userCourses);
+        } catch (error) {
+            console.error('Ошибка при получении курсов пользователя:', error);
+        }
+    };
 
     const handleSaveName = async () => {
         if (!user || !id) return
@@ -132,6 +132,25 @@ export const User = () => {
         }
     }
 
+    const handlePhotoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (!file || !id) return;
+
+        try {
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            await userRepository().uploadPhoto(Number(id), { file });
+            await fetchUserPhotos(); // Обновляем список фото после загрузки
+        } catch (error) {
+            console.error('Ошибка при загрузке фото:', error);
+        }
+    };
+
+    const handleAddPhotoClick = () => {
+        fileInputRef.current?.click();
+    };
+
     if (isLoading) {
         return <div className="min-h-screen flex items-center justify-center">Загрузка...</div>
     }
@@ -144,16 +163,22 @@ export const User = () => {
         {
             id: "photo",
             label: "Фотографии",
-            content: <PhotoGrid />,
+            content: <PhotoGrid photos={userPhotos} />,
         },
         {
             id: "courses",
             label: "Курсы",
             content: (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mt-8">
-                    {courses.map((course) => (
-                        <CourseCard key={course.id} course={course} />
-                    ))}
+                    {userCourses && userCourses.length > 0 ? (
+                        userCourses.map((course) => (
+                            <CourseCard key={course.id} course={course} />
+                        ))
+                    ) : (
+                        <div className="col-span-2 text-center py-8 text-gray-500">
+                            Нет доступных курсов
+                        </div>
+                    )}
                 </div>
             ),
         },
@@ -188,7 +213,15 @@ export const User = () => {
                             <div className="flex flex-col items-center mb-4">
                                 <h1 className="mb-6 text-2xl sm:text-3xl font-bold">{user.nickname}</h1>
                                 <div className="w-full flex flex-col items-center justify-center sm:flex-row gap-2">
+                                    <input
+                                        type="file"
+                                        ref={fileInputRef}
+                                        onChange={handlePhotoUpload}
+                                        accept="image/*"
+                                        className="hidden"
+                                    />
                                     <button
+                                        onClick={handleAddPhotoClick}
                                         className="
                                         mt-2 px-5 py-2 rounded-lg border border-blue-600 text-blue-600 font-semibold
                                         hover:bg-blue-50 transition

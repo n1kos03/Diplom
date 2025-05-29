@@ -5,6 +5,7 @@ import { Plus, Trash2, FileText, Video, Paperclip, ChevronDown, ChevronUp } from
 import { Link, useParams, useNavigate } from "react-router-dom"
 import { Header } from "widgets/header"
 import { courseRepository } from "entities/course/api"
+import type { ICourseMaterial, ICourseTask } from "entities/course/model/types"
 
 // Типы
 function genId() { return Math.random().toString(36).slice(2, 10) }
@@ -16,6 +17,7 @@ type Block = {
     apiId?: number
     description?: string
     files?: File[]
+    order_number?: number
 }
 
 type Section = {
@@ -36,6 +38,8 @@ export const EditCourse = () => {
     const [selectedFiles, setSelectedFiles] = useState<{ [blockId: string]: File | null }>({})
     const [isLoading, setIsLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
+    const [materialsData, setMaterialsData] = useState<ICourseMaterial[]>([])
+    const [tasksData, setTasksData] = useState<ICourseTask[]>([])
 
     useEffect(() => {
         const fetchCourseData = async () => {
@@ -54,13 +58,16 @@ export const EditCourse = () => {
                 const sectionsData = await courseRepository().getSections(Number(id))
                 
                 // Получаем материалы и задания для каждой секции
-                const materialsData = await courseRepository().getMaterials(Number(id)) || []
-                const tasksData = await courseRepository().getTasks(Number(id)) || []
+                const materials = await courseRepository().getMaterials(Number(id)) || []
+                const tasks = await courseRepository().getTasks(Number(id)) || []
+                
+                setMaterialsData(materials)
+                setTasksData(tasks)
 
                 // Преобразуем данные в формат для редактирования
                 const formattedSections = sectionsData.map(section => {
-                    const sectionMaterials = materialsData.filter(m => m.section_id === section.id)
-                    const sectionTasks = tasksData.filter(t => t.section_id === section.id)
+                    const sectionMaterials = materials.filter(m => m.section_id === section.id)
+                    const sectionTasks = tasks.filter(t => t.section_id === section.id)
 
                     return {
                         id: genId(),
@@ -70,14 +77,16 @@ export const EditCourse = () => {
                             ...sectionMaterials.map(material => ({
                                 id: genId(),
                                 apiId: material.id,
-                                title: material.description,
-                                type: "material" as const
+                                title: material.title,
+                                type: "material" as const,
+                                description: material.description
                             })),
                             ...sectionTasks.map(task => ({
                                 id: genId(),
                                 apiId: task.id,
-                                title: task.description,
-                                type: "task" as const
+                                title: task.title,
+                                type: "task" as const,
+                                description: task.description
                             }))
                         ]
                     }
@@ -121,11 +130,32 @@ export const EditCourse = () => {
 
     // Добавить блок
     const addBlock = (sectionId: string) => {
-        setSections(sections.map(s =>
-            s.id === sectionId
-                ? { ...s, blocks: [...s.blocks, { id: genId(), title: "Новый блок", type: "material" }] }
-                : s
-        ))
+        setSections(sections.map(s => {
+            if (s.id === sectionId) {
+                // Находим максимальный order_number среди существующих блоков
+                const maxOrderNumber = s.blocks.length > 0 
+                    ? Math.max(...s.blocks.map(b => {
+                        if (b.apiId) {
+                            return b.type === "material" 
+                                ? materialsData.find(m => m.id === b.apiId)?.order_number || 0
+                                : tasksData.find(t => t.id === b.apiId)?.order_number || 0
+                        }
+                        return 0
+                    }))
+                    : 0;
+                
+                return { 
+                    ...s, 
+                    blocks: [...s.blocks, { 
+                        id: genId(), 
+                        title: "Новый блок", 
+                        type: "material",
+                        order_number: maxOrderNumber + 1
+                    }] 
+                }
+            }
+            return s
+        }))
     }
 
     // Редактировать блок
@@ -157,11 +187,33 @@ export const EditCourse = () => {
 
     // Добавить файл к блоку
     const addBlockFile = (sectionId: string, blockId: string, file: File) => {
-        setSections(sections.map(s =>
-            s.id === sectionId
-                ? { ...s, blocks: s.blocks.map(b => b.id === blockId ? { ...b, files: [file] } : b) }
-                : s
-        ))
+        console.log('Добавляем файл в блок:', { sectionId, blockId, file });
+        console.log('Текущие секции:', sections);
+        setSections(prevSections => {
+            const newSections = prevSections.map(section => {
+                if (section.id === sectionId) {
+                    console.log('Нашли секцию:', section);
+                    return {
+                        ...section,
+                        blocks: section.blocks.map(block => {
+                            if (block.id === blockId) {
+                                console.log('Обновляем блок:', block);
+                                const updatedBlock = {
+                                    ...block,
+                                    files: [file]
+                                };
+                                console.log('Обновленный блок:', updatedBlock);
+                                return updatedBlock;
+                            }
+                            return block;
+                        })
+                    };
+                }
+                return section;
+            });
+            console.log('Новые секции:', newSections);
+            return newSections;
+        });
     }
 
     // Удалить файл из блока
@@ -255,27 +307,44 @@ export const EditCourse = () => {
                         // Если изменился тип блока, удаляем старый и создаем новый
                         console.log('Тип блока изменился, удаляем старый...')
                         if (block.type === "material") {
-                            await courseRepository().deleteMaterial(block.apiId)
+                            await courseRepository().deleteMaterial(Number(id), section.apiId!, block.apiId!)
                         } else {
-                            await courseRepository().deleteTask(block.apiId)
+                            await courseRepository().deleteTask(block.apiId!)
                         }
                     }
 
                     // Создаем новый блок
-                    console.log('Создаем новый блок...')
+                    console.log('Создаем новый блок...', block);
+                    console.log('Файлы в блоке:', block.files);
                     try {
+                        if (!block.files?.[0]) {
+                            console.log('Файл не найден в блоке:', block);
+                            throw new Error('Файл не выбран')
+                        }
+
+                        const file = block.files[0];
+                        console.log('Файл найден:', file);
+
+                        // Проверяем размер файла перед загрузкой
+                        if (file.size > 100 * 1024 * 1024) {
+                            throw new Error('Размер файла не должен превышать 100MB');
+                        }
+
                         if (block.type === "material") {
                             const newMaterial = await courseRepository().uploadMaterial(Number(id), section.apiId!, {
+                                title: block.title,
                                 description: block.description || "",
-                                file: block.files?.[0] || new File([], block.title),
+                                file: file,
                                 order_number: orderNumber
                             })
                             block.apiId = newMaterial.id
                             console.log('Материал создан:', newMaterial)
                         } else {
+                            console.log('Загружаем задание с файлом:', file);
                             const newTask = await courseRepository().uploadTask(Number(id), section.apiId!, {
+                                title: block.title,
                                 description: block.description || "",
-                                file: block.files?.[0] || new File([], block.title),
+                                file: file,
                                 order_number: orderNumber
                             })
                             block.apiId = newTask.id
@@ -283,7 +352,13 @@ export const EditCourse = () => {
                         }
                     } catch (err) {
                         console.error('Ошибка при создании блока:', err)
-                        throw err
+                        if (err instanceof Error) {
+                            if (err.message.includes('net::ERR_CONNECTION_RESET')) {
+                                throw new Error('Ошибка загрузки файла: соединение с сервером было сброшено. Возможно, файл слишком большой или сервер не отвечает.');
+                            }
+                            throw err;
+                        }
+                        throw new Error('Неизвестная ошибка при загрузке файла');
                     }
                 }
 
@@ -292,7 +367,7 @@ export const EditCourse = () => {
                 for (const material of sectionMaterials) {
                     if (!section.blocks.some(b => b.apiId === material.id)) {
                         console.log('Удаляем материал:', material)
-                        await courseRepository().deleteMaterial(material.id)
+                        await courseRepository().deleteMaterial(Number(id), section.apiId!, material.id)
                     }
                 }
                 for (const task of sectionTasks) {
@@ -409,93 +484,109 @@ export const EditCourse = () => {
                                             </AccordionTrigger>
                                             <AccordionContent className="px-0">
                                                 <div className="space-y-2">
-                                                    {section.blocks.map((block) => {
-                                                        const isOpen = !!openBlocks[block.id]
-                                                        return (
-                                                            <div key={block.id} className="rounded-xl">
-                                                                <div
-                                                                    className="flex items-center gap-4 w-full px-4 py-3 cursor-pointer rounded-xl"
-                                                                    onClick={() => setOpenBlocks(prev => ({ ...prev, [block.id]: !isOpen }))}
-                                                                >
-                                                                    {block.type === "material" ? <Video className="w-5 h-5 text-blue-400" /> : <FileText className="w-5 h-5 text-teal-400" />}
-                                                                    <input
-                                                                        className="font-semibold focus:border-blue-600 bg-transparent outline-none flex-1 transition"
-                                                                        value={block.title}
-                                                                        onChange={e => editBlock(section.id, block.id, e.target.value, block.type)}
-                                                                        onClick={e => e.stopPropagation()}
-                                                                    />
-                                                                    <select
-                                                                        className="border rounded px-2 py-1 text-xs"
-                                                                        value={block.type}
-                                                                        onChange={e => editBlock(section.id, block.id, block.title, e.target.value as "material" | "task")}
-                                                                        onClick={e => e.stopPropagation()}
+                                                    {section.blocks
+                                                        .sort((a, b) => {
+                                                            // Используем order_number из самого блока, если его нет - берем из API
+                                                            const aOrder = a.order_number || (a.apiId ? 
+                                                                (a.type === "material" ? 
+                                                                    materialsData.find((m: ICourseMaterial) => m.id === a.apiId)?.order_number || 0 :
+                                                                    tasksData.find((t: ICourseTask) => t.id === a.apiId)?.order_number || 0) : 0);
+                                                            const bOrder = b.order_number || (b.apiId ? 
+                                                                (b.type === "material" ? 
+                                                                    materialsData.find((m: ICourseMaterial) => m.id === b.apiId)?.order_number || 0 :
+                                                                    tasksData.find((t: ICourseTask) => t.id === b.apiId)?.order_number || 0) : 0);
+                                                            return aOrder - bOrder;
+                                                        })
+                                                        .map((block) => {
+                                                            const isOpen = !!openBlocks[block.id]
+                                                            return (
+                                                                <div key={block.id} className="rounded-xl">
+                                                                    <div
+                                                                        className="flex items-center gap-4 w-full px-4 py-3 cursor-pointer rounded-xl"
+                                                                        onClick={() => setOpenBlocks(prev => ({ ...prev, [block.id]: !isOpen }))}
                                                                     >
-                                                                        <option value="material">Материал</option>
-                                                                        <option value="task">Задание</option>
-                                                                    </select>
-                                                                    <div 
-                                                                        onClick={e => { e.stopPropagation(); removeBlock(section.id, block.id) }} 
-                                                                        className="-mr-2 flex items-center gap-1 text-xs text-red-600 bg-red-100 px-2 py-1 rounded-md cursor-pointer hover:bg-red-200 transition"
-                                                                    >
-                                                                        <Trash2 className="w-4 h-4" />
-                                                                    </div>
-                                                                    {isOpen ? <ChevronUp className="w-4 h-4 text-gray-400 ml-2" /> : <ChevronDown className="w-4 h-4 text-gray-400 ml-2" />}
-                                                                </div>
-                                                                {isOpen && (
-                                                                    <div className="px-4 py-3 rounded-b-xl">
-                                                                        <textarea
-                                                                            className="w-full border bg-white border-gray-200 focus:border-blue-400 rounded-lg p-2 mb-2 text-sm transition"
-                                                                            placeholder="Описание блока"
-                                                                            value={block.description || ""}
-                                                                            onChange={e => editBlockDescription(section.id, block.id, e.target.value)}
+                                                                        {block.type === "material" ? <Video className="w-5 h-5 text-blue-400" /> : <FileText className="w-5 h-5 text-teal-400" />}
+                                                                        <input
+                                                                            className="font-semibold focus:border-blue-600 bg-transparent outline-none flex-1 transition"
+                                                                            value={block.title}
+                                                                            onChange={e => editBlock(section.id, block.id, e.target.value, block.type)}
+                                                                            onClick={e => e.stopPropagation()}
                                                                         />
-                                                                        <div className="mb-2 flex items-center gap-2">
-                                                                            <label className="flex items-center gap-2 cursor-pointer text-blue-600 font-medium hover:underline">
-                                                                                <Paperclip className="w-5 h-5" />
-                                                                                <span>Добавить файл</span>
-                                                                                <input
-                                                                                    type="file"
-                                                                                    className="hidden"
-                                                                                    onChange={e => {
-                                                                                        if (e.target.files && e.target.files[0]) {
-                                                                                            setSelectedFiles(prev => ({ ...prev, [block.id]: e.target.files![0] }))
-                                                                                        }
-                                                                                    }}
-                                                                                />
-                                                                            </label>
-                                                                            {selectedFiles[block.id] && (
-                                                                                <div
-                                                                                    className="text-xs text-green-700 bg-green-100 px-2 py-1 rounded hover:bg-green-200 ml-2 cursor-pointer"
-                                                                                    onClick={() => {
-                                                                                        addBlockFile(section.id, block.id, selectedFiles[block.id]!)
-                                                                                        setSelectedFiles(prev => ({ ...prev, [block.id]: null }))
-                                                                                    }}
-                                                                                >
-                                                                                    Добавить: {selectedFiles[block.id]?.name}
-                                                                                </div>
+                                                                        <select
+                                                                            className="border rounded px-2 py-1 text-xs"
+                                                                            value={block.type}
+                                                                            onChange={e => editBlock(section.id, block.id, block.title, e.target.value as "material" | "task")}
+                                                                            onClick={e => e.stopPropagation()}
+                                                                        >
+                                                                            <option value="material">Материал</option>
+                                                                            <option value="task">Задание</option>
+                                                                        </select>
+                                                                        <div 
+                                                                            onClick={e => { e.stopPropagation(); removeBlock(section.id, block.id) }} 
+                                                                            className="-mr-2 flex items-center gap-1 text-xs text-red-600 bg-red-100 px-2 py-1 rounded-md cursor-pointer hover:bg-red-200 transition"
+                                                                        >
+                                                                            <Trash2 className="w-4 h-4" />
+                                                                        </div>
+                                                                        {isOpen ? <ChevronUp className="w-4 h-4 text-gray-400 ml-2" /> : <ChevronDown className="w-4 h-4 text-gray-400 ml-2" />}
+                                                                    </div>
+                                                                    {isOpen && (
+                                                                        <div className="px-4 py-3 rounded-b-xl">
+                                                                            <textarea
+                                                                                className="w-full border bg-white border-gray-200 focus:border-blue-400 rounded-lg p-2 mb-2 text-sm transition"
+                                                                                placeholder="Описание блока"
+                                                                                value={block.description || ""}
+                                                                                onChange={e => editBlockDescription(section.id, block.id, e.target.value)}
+                                                                            />
+                                                                            <div className="mb-2 flex items-center gap-2">
+                                                                                <label className="flex items-center gap-2 cursor-pointer text-blue-600 font-medium hover:underline">
+                                                                                    <Paperclip className="w-5 h-5" />
+                                                                                    <span>Добавить файл</span>
+                                                                                    <input
+                                                                                        type="file"
+                                                                                        className="hidden"
+                                                                                        onChange={e => {
+                                                                                            if (e.target.files && e.target.files[0]) {
+                                                                                                const file = e.target.files[0];
+                                                                                                // Проверяем размер файла (максимум 100MB)
+                                                                                                if (file.size > 100 * 1024 * 1024) {
+                                                                                                    alert('Размер файла не должен превышать 100MB');
+                                                                                                    return;
+                                                                                                }
+                                                                                                console.log('Выбран файл:', file);
+                                                                                                setSelectedFiles(prev => ({ ...prev, [block.id]: file }));
+                                                                                                // Сразу добавляем файл в блок
+                                                                                                addBlockFile(section.id, block.id, file);
+                                                                                            }
+                                                                                        }}
+                                                                                    />
+                                                                                </label>
+                                                                                {selectedFiles[block.id] && (
+                                                                                    <div className="text-xs text-green-700 bg-green-100 px-2 py-1 rounded hover:bg-green-200 ml-2">
+                                                                                        Выбран: {selectedFiles[block.id]?.name}
+                                                                                    </div>
+                                                                                )}
+                                                                            </div>
+                                                                            {block.files && block.files.length > 0 && (
+                                                                                <ul className="mb-2">
+                                                                                    {block.files.map((file, i) => (
+                                                                                        <li key={file.name} className="flex items-center gap-2 text-sm">
+                                                                                            <FileText className="w-4 h-4 text-gray-400" />
+                                                                                            <a href={URL.createObjectURL(file)} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline truncate max-w-[180px]">{file.name}</a>
+                                                                                            <div 
+                                                                                                onClick={() => removeBlockFile(section.id, block.id, i)} 
+                                                                                                className="text-xs text-red-600 ml-2 hover:underline cursor-pointer"
+                                                                                            >
+                                                                                                Удалить
+                                                                                            </div>
+                                                                                        </li>
+                                                                                    ))}
+                                                                                </ul>
                                                                             )}
                                                                         </div>
-                                                                        {block.files && block.files.length > 0 && (
-                                                                            <ul className="mb-2">
-                                                                                {block.files.map((file, i) => (
-                                                                                    <li key={file.name} className="flex items-center gap-2 text-sm">
-                                                                                        <FileText className="w-4 h-4 text-gray-400" />
-                                                                                        <a href={URL.createObjectURL(file)} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline truncate max-w-[180px]">{file.name}</a>
-                                                                                        <div 
-                                                                                            onClick={() => removeBlockFile(section.id, block.id, i)} 
-                                                                                            className="text-xs text-red-600 ml-2 hover:underline cursor-pointer"
-                                                                                        >
-                                                                                            Удалить
-                                                                                        </div>
-                                                                                    </li>
-                                                                                ))}
-                                                                            </ul>
-                                                                        )}
-                                                                    </div>
-                                                                )}
-                                                            </div>
-                                                        )
-                                                    })}
+                                                                    )}
+                                                                </div>
+                                                            )
+                                                        })}
                                                 </div>
                                             </AccordionContent>
                                         </AccordionItem>

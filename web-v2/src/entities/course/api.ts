@@ -1,4 +1,5 @@
 import { apiInstance } from "shared/api";
+import { API_URL } from "shared/api/base";
 import type { 
     ICourse, 
     ICreateCourseData, 
@@ -69,14 +70,18 @@ export const courseRepository = () => {
         uploadMaterial(courseId: number, sectionId: number, materialData: ICreateMaterialData): Promise<IMaterialResponse> {
             const formData = new FormData();
             formData.append('file', materialData.file);
+            formData.append('title', materialData.title);
             formData.append('description', materialData.description);
             formData.append('order_number', materialData.order_number.toString());
 
-            return apiInstance.post(`/courses/${courseId}/materials-upload/${sectionId}`, formData, {
+            return fetch(`${API_URL}/courses/${courseId}/materials-upload/${sectionId}/`, {
+                method: 'POST',
+                body: formData,
+                credentials: 'include',
                 headers: {
-                    'Content-Type': 'multipart/form-data',
-                },
-            });
+                    'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+                }
+            }).then(res => res.json());
         },
 
         updateMaterial(courseId: number, sectionId: number, materialId: number, description: string, orderNumber: number): Promise<IMaterialResponse> {
@@ -91,8 +96,10 @@ export const courseRepository = () => {
             });
         },
 
-        deleteMaterial(materialId: number): Promise<IMaterialResponse> {
-            return apiInstance.post(`/courses/materials/${materialId}/delete`);
+        deleteMaterial(courseId: number, sectionId: number, materialId: number): Promise<IMaterialResponse> {
+            const formData = new FormData();
+            formData.append('id', materialId.toString());
+            return apiInstance.remove(`/courses/${courseId}/materials/${sectionId}`, { data: formData });
         },
 
         // Subscription methods
@@ -100,12 +107,31 @@ export const courseRepository = () => {
             return apiInstance.get("/subscriptions");
         },
 
+        getSubscribersCount(courseId: number): Promise<number> {
+            return apiInstance.get("/subscriptions").then(subscriptions => {
+                return (subscriptions as ISubscription[]).filter(s => s.course_id === courseId).length;
+            });
+        },
+
         subscribeToCourse(courseId: number): Promise<ISubscriptionResponse> {
-            return apiInstance.post("/subscriptions", { course_id: courseId });
+            const formData = new FormData();
+            formData.append('course_id', courseId.toString());
+            return apiInstance.post("/subscriptions", formData, {
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                },
+            });
         },
 
         unsubscribeFromCourse(courseId: number): Promise<ISubscriptionResponse> {
-            return apiInstance.post(`/subscriptions/delete`, { course_id: courseId });
+            const formData = new FormData();
+            formData.append('course_id', courseId.toString());
+            return apiInstance.remove(`/subscriptions`, {
+                data: formData,
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                },
+            });
         },
 
         // Course Tasks methods
@@ -116,14 +142,18 @@ export const courseRepository = () => {
         uploadTask(courseId: number, sectionId: number, taskData: ICreateTaskData): Promise<ITaskResponse> {
             const formData = new FormData();
             formData.append('file', taskData.file);
+            formData.append('title', taskData.title);
             formData.append('description', taskData.description);
             formData.append('order_number', taskData.order_number.toString());
 
-            return apiInstance.post(`/courses/${courseId}/tasks-upload/${sectionId}`, formData, {
+            return fetch(`${API_URL}/courses/${courseId}/tasks-upload/${sectionId}/`, {
+                method: 'POST',
+                body: formData,
+                credentials: 'include',
                 headers: {
-                    'Content-Type': 'multipart/form-data',
-                },
-            });
+                    'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+                }
+            }).then(res => res.json());
         },
 
         updateTask(courseId: number, sectionId: number, taskId: number, description: string, orderNumber: number): Promise<ITaskResponse> {

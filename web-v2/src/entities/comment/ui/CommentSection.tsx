@@ -1,63 +1,93 @@
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { StarRating } from "shared/ui/rating"
 import { Textarea } from "shared/ui/textarea"
-interface Comment {
-  id: string
-  userName: string
-  userInitials: string
-  userImage?: string
-  date: string
-  rating: number
-  content: string
-  likes: number
-  dislikes: number
-  userLiked?: boolean
-  userDisliked?: boolean
+import { commentRepository } from "../api"
+import { ratingRepository } from "entities/rating/api"
+import { userRepository } from "entities/user/api"
+import type { IComment } from "../models/types"
+import type { ICourseRating } from "entities/rating/model/types"
+import type { IUser } from "entities/user/model/types"
+import { courseRepository } from "entities/course/api"
+import type { ICourse } from "entities/course/model/types"
+
+interface CommentsSectionProps {
+  authorName: string
+  courseId: number
+  onRatingUpdate?: (updatedCourse: ICourse) => void
 }
 
-export function CommentsSection() {
-  const [comments, setComments] = useState<Comment[]>([
-    {
-      id: "1",
-      userName: "Артем Ребрик",
-      userInitials: "СД",
-      userImage: "/placeholder.svg?height=40&width=40",
-      date: "2 месяца назад",
-      rating: 5,
-      content:
-        "Этот курс превзошел все мои ожидания! Преподаватель объясняет сложные концепции UI/UX так, что их легко понять. Практические проекты действительно помогли мне применить полученные знания. Очень рекомендую всем, кто хочет начать карьеру в этой области.",
-      likes: 24,
-      dislikes: 2,
-    },
-    {
-      id: "2",
-      userName: "Михаил Иванов",
-      userInitials: "МЧ",
-      date: "3 недели назад",
-      rating: 4,
-      content:
-        "В целом отличный курс. Особенно полезными были уроки по Figma. Хотелось бы больше контента о методах исследования пользователей, но принципы дизайна были хорошо раскрыты. Преподаватель компетентен и быстро отвечает на вопросы.",
-      likes: 15,
-      dislikes: 1,
-    },
-    {
-      id: "3",
-      userName: "Александр Иванов",
-      userInitials: "АИ",
-      date: "1 месяц назад",
-      rating: 4,
-      content:
-        "Хорошее введение в UI/UX дизайн. Некоторые разделы показались слишком сжатыми, особенно в 4-й неделе. Проекты были интересными, но хотелось бы более подробной обратной связи. Тем не менее, я многому научился и теперь чувствую себя увереннее в своих навыках дизайна.",
-      likes: 8,
-      dislikes: 3,
-    },
-  ])
-
+export function CommentsSection({ authorName, courseId, onRatingUpdate }: CommentsSectionProps) {
+  const [currentUser, setCurrentUser] = useState<{ nickname: string; id: number } | null>(null)
+  const [comments, setComments] = useState<IComment[]>([])
+  const [ratings, setRatings] = useState<ICourseRating[]>([])
+  const [users, setUsers] = useState<Record<number, IUser>>({})
   const [newComment, setNewComment] = useState("")
   const [newRating, setNewRating] = useState(5)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [hasUserRated, setHasUserRated] = useState(false)
+
+  useEffect(() => {
+    const userStr = localStorage.getItem('user')
+    if (userStr) {
+      try {
+        const user = JSON.parse(userStr)
+        setCurrentUser(user.user)
+      } catch (e) {
+        console.error('Ошибка при парсинге данных пользователя:', e)
+      }
+    }
+  }, [])
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setIsLoading(true)
+        const [commentsData, ratingsData, usersData] = await Promise.all([
+          commentRepository().getCommentsByCourseId(courseId),
+          ratingRepository().getAllRatings(),
+          userRepository().getAllUsers()
+        ])
+        setComments(commentsData)
+        setRatings(ratingsData.filter(rating => rating.course_id === courseId))
+        
+        // Преобразуем массив пользователей в объект для быстрого доступа по id
+        const usersMap = usersData.reduce((acc, user) => {
+          acc[user.id] = user
+          return acc
+        }, {} as Record<number, IUser>)
+        setUsers(usersMap)
+      } catch (err) {
+        console.error('Ошибка при загрузке данных:', err)
+        setError('Не удалось загрузить данные')
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchData()
+  }, [courseId])
+
+  useEffect(() => {
+    const checkUserRating = async () => {
+      if (!currentUser?.id) return
+
+      try {
+        const ratings = await ratingRepository().getAllRatings()
+        const userRating = ratings.find(rating => 
+          rating.course_id === courseId && rating.user_id === currentUser.id
+        )
+        setHasUserRated(!!userRating)
+      } catch (err) {
+        console.error('Ошибка при проверке рейтинга пользователя:', err)
+      }
+    }
+
+    checkUserRating()
+  }, [courseId, currentUser?.id])
 
   const handleCommentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setNewComment(e.target.value)
@@ -67,28 +97,58 @@ export function CommentsSection() {
     setNewRating(rating)
   }
 
-  const handleSubmitComment = () => {
-    if (!newComment.trim()) return
+  const handleSubmitComment = async () => {
+    if (!newComment.trim() || hasUserRated) return
 
     setIsSubmitting(true)
+    setError(null)
 
-    // Simulate API call
-    setTimeout(() => {
-      const newCommentObj: Comment = {
-        id: Date.now().toString(),
-        userName: "Вы",
-        userInitials: "Вы",
-        date: "Только что",
-        rating: newRating,
-        content: newComment,
-        likes: 0,
-        dislikes: 0,
+    try {
+      console.log('Отправка рейтинга:', { courseId, rating: newRating })
+      // Создаем рейтинг
+      const ratingResponse = await ratingRepository().createRating(courseId, {
+        rating: newRating
+      })
+      console.log('Ответ от сервера (рейтинг):', ratingResponse)
+
+      // Создаем комментарий
+      const commentResponse = await commentRepository().createComment(courseId, {
+        content: newComment
+      })
+      console.log('Ответ от сервера (комментарий):', commentResponse)
+
+      // Обновляем список комментариев и рейтингов
+      const [updatedComments, updatedRatings, updatedCourse] = await Promise.all([
+        commentRepository().getCommentsByCourseId(courseId),
+        ratingRepository().getAllRatings(),
+        courseRepository().getCourseById(courseId)
+      ])
+      setComments(updatedComments)
+      setRatings(updatedRatings.filter(rating => rating.course_id === courseId))
+      
+      // Обновляем курс в родительском компоненте
+      if (onRatingUpdate) {
+        onRatingUpdate(updatedCourse)
       }
 
-      setComments([newCommentObj, ...comments])
+      // Очищаем форму
       setNewComment("")
+      setNewRating(5)
+      setHasUserRated(true)
+    } catch (err) {
+      console.error('Ошибка при отправке комментария:', err)
+      setError('Не удалось отправить комментарий')
+    } finally {
       setIsSubmitting(false)
-    }, 500)
+    }
+  }
+
+  if (isLoading) {
+    return <div className="mt-12 text-center">Загрузка комментариев...</div>
+  }
+
+  if (error) {
+    return <div className="mt-12 text-center text-red-500">{error}</div>
   }
 
   return (
@@ -96,59 +156,75 @@ export function CommentsSection() {
       <h2 className="text-2xl font-bold mb-6">Отзывы студентов</h2>
 
       {/* Add comment form */}
-      <div className="bg-gray-100 p-6 rounded-2xl mb-8">
-        <h3 className="text-lg font-semibold mb-4">Добавить отзыв</h3>
-        <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-700 mb-1">Ваш рейтинг</label>
-          <StarRating rating={newRating} totalStars={5} onRatingChange={handleRatingChange} />
+      {currentUser?.nickname !== authorName && !hasUserRated && (
+        <div className="bg-gray-100 p-6 rounded-2xl mb-8">
+          <h3 className="text-lg font-semibold mb-4">Добавить отзыв</h3>
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-700 mb-1">Ваш рейтинг</label>
+            <StarRating rating={newRating} totalStars={5} onRatingChange={handleRatingChange} />
+          </div>
+          <div className="mb-4">
+            <label htmlFor="comment" className="block text-sm font-medium text-gray-700 mb-1">
+              Ваш отзыв
+            </label>
+            <Textarea
+              id="comment"
+              placeholder="Поделитесь своим опытом с этим курсом..."
+              value={newComment}
+              onChange={handleCommentChange}
+              rows={4}
+              className="mt-3 bg-white border-none resize-none"
+            />
+          </div>
+          <button
+            onClick={handleSubmitComment}
+            disabled={isSubmitting}
+            className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg disabled:opacity-50"
+          >
+            {isSubmitting ? "Отправка..." : "Отправить отзыв"}
+          </button>
         </div>
-        <div className="mb-4">
-          <label htmlFor="comment" className="block text-sm font-medium text-gray-700 mb-1">
-            Ваш отзыв
-          </label>
-          <Textarea
-            id="comment"
-            placeholder="Поделитесь своим опытом с этим курсом..."
-            value={newComment}
-            onChange={handleCommentChange}
-            rows={4}
-            className="mt-3 bg-white border-none resize-none"
-          />
+      )}
+
+      {hasUserRated && (
+        <div className="bg-blue-50 p-4 rounded-lg mb-8">
+          <p className="text-blue-700">Вы уже оставили отзыв на этот курс.</p>
         </div>
-        <button
-          onClick={handleSubmitComment}
-          className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg"
-        >
-          {isSubmitting ? "Отправка..." : "Отправить отзыв"}
-        </button>
-      </div>
+      )}
 
       {/* Comments list */}
       <div className="space-y-6">
-        {comments.map((comment) => (
-          <div key={comment.id} className="border-b border-gray-200 pb-6">
-            <div className="flex items-start gap-4">
-              {/* <Avatar className="h-10 w-10">
-                <AvatarImage src={comment.userImage || "/placeholder.svg"} alt={comment.userName} />
-                <AvatarFallback>{comment.userInitials}</AvatarFallback>
-              </Avatar> */}
-
-              <div className="flex-1">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h4 className="font-semibold">{comment.userName}</h4>
-                    <div className="mt-2 flex items-center gap-2 text-sm text-gray-500">
-                      <StarRating rating={comment.rating} totalStars={5} />
-                      <span>{comment.date}</span>
+        {comments && comments.length > 0 ? (
+          comments.map((comment) => {
+            const userRating = ratings.find(rating => rating.user_id === comment.user_id)
+            const user = users[comment.user_id]
+            return (
+              <div key={comment.id} className="border-b border-gray-200 pb-6">
+                <div className="flex items-start gap-4">
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h4 className="font-semibold">{user?.nickname || 'Неизвестный пользователь'}</h4>
+                        <div className="mt-2 flex items-center gap-2 text-sm text-gray-500">
+                          {userRating && (
+                            <StarRating rating={userRating.rating} totalStars={5} />
+                          )}
+                          <span>{new Date(comment.created_at).toLocaleDateString()}</span>
+                        </div>
+                      </div>
                     </div>
+
+                    <p className="mt-2 text-gray-700">{comment.content}</p>
                   </div>
                 </div>
-
-                <p className="mt-2 text-gray-700">{comment.content}</p>
               </div>
-            </div>
+            )
+          })
+        ) : (
+          <div className="text-center text-gray-500 py-4">
+            Пока нет комментариев.
           </div>
-        ))}
+        )}
       </div>
     </div>
   )
