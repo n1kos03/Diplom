@@ -60,7 +60,7 @@ export const courseRepository = () => {
         },
 
         deleteSection(sectionId: number): Promise<ISectionResponse> {
-            return apiInstance.post(`/sections/${sectionId}/delete`);
+            return apiInstance.remove(`/sections/${sectionId}`);
         },
 
         getMaterials(courseId: number): Promise<ICourseMaterial[]> {
@@ -97,9 +97,7 @@ export const courseRepository = () => {
         },
 
         deleteMaterial(courseId: number, sectionId: number, materialId: number): Promise<IMaterialResponse> {
-            const formData = new FormData();
-            formData.append('id', materialId.toString());
-            return apiInstance.remove(`/courses/${courseId}/materials/${sectionId}`, { data: formData });
+            return apiInstance.remove(`/courses/${courseId}/materials/${sectionId}/${materialId}`);
         },
 
         // Subscription methods
@@ -109,6 +107,7 @@ export const courseRepository = () => {
 
         getSubscribersCount(courseId: number): Promise<number> {
             return apiInstance.get("/subscriptions").then(subscriptions => {
+                if (!subscriptions) return 0;
                 return (subscriptions as ISubscription[]).filter(s => s.course_id === courseId).length;
             });
         },
@@ -168,8 +167,8 @@ export const courseRepository = () => {
             });
         },
 
-        deleteTask(taskId: number): Promise<ITaskResponse> {
-            return apiInstance.post(`/courses/tasks/${taskId}/delete`);
+        deleteTask(courseId: number, sectionId: number, taskId: number): Promise<ITaskResponse> {
+            return apiInstance.remove(`/courses/${courseId}/tasks/${sectionId}/${taskId}`);
         },
 
         // User Answers methods

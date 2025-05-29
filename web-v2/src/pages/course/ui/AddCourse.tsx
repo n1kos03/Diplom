@@ -12,16 +12,17 @@ function genId() { return Math.random().toString(36).slice(2, 10) }
 type Block = {
     id: string
     title: string
-    type: "video" | "document"
+    type: "material" | "task"
     description?: string
     files?: File[]
+    order_number?: number
 }
 
 type Section = {
     id: string
     title: string
     blocks: Block[]
-    apiId?: number
+    order_number?: number
 }
 
 export const AddCourse = () => {
@@ -41,6 +42,7 @@ export const AddCourse = () => {
             id: genId(),
             title: `Раздел ${sections.length + 1}`,
             blocks: [],
+            order_number: sections.length + 1
         }
         setSections([...sections, newSection])
     }
@@ -52,23 +54,43 @@ export const AddCourse = () => {
 
     // Удалить раздел
     const removeSection = (id: string) => {
-        setSections(sections.filter(s => s.id !== id))
+        setSections(sections.filter(s => s.id !== id).map((section, index) => ({
+            ...section,
+            order_number: index + 1
+        })))
     }
 
     // Добавить блок
     const addBlock = (sectionId: string) => {
-        setSections(sections.map(s =>
-            s.id === sectionId
-                ? { ...s, blocks: [...s.blocks, { id: genId(), title: "Новый блок", type: "video" }] }
-                : s
-        ))
+        setSections(sections.map(s => {
+            if (s.id === sectionId) {
+                const newBlock = { 
+                    id: genId(), 
+                    title: `Новый блок ${s.blocks.length + 1}`, 
+                    type: "material" as const,
+                    order_number: s.blocks.length
+                };
+                return { 
+                    ...s, 
+                    blocks: [...s.blocks, newBlock] 
+                }
+            }
+            return s
+        }))
     }
 
     // Редактировать блок
-    const editBlock = (sectionId: string, blockId: string, newTitle: string, newType: "video" | "document") => {
+    const editBlock = (sectionId: string, blockId: string, newTitle: string, newType: "material" | "task") => {
         setSections(sections.map(s =>
             s.id === sectionId
-                ? { ...s, blocks: s.blocks.map(b => b.id === blockId ? { ...b, title: newTitle, type: newType } : b) }
+                ? { 
+                    ...s, 
+                    blocks: s.blocks.map(b => 
+                        b.id === blockId 
+                            ? { ...b, title: newTitle, type: newType } 
+                            : b
+                    ) 
+                }
                 : s
         ))
     }
@@ -109,6 +131,11 @@ export const AddCourse = () => {
         ))
     }
 
+    // Проверяем, все ли блоки имеют файлы
+    const allBlocksHaveFiles = sections.every(section => 
+        section.blocks.every(block => block.files?.[0])
+    )
+
     const saveCourse = async () => {
         if (!title || !description) {
             setError("Пожалуйста, заполните название и описание курса")
@@ -117,6 +144,11 @@ export const AddCourse = () => {
 
         if (sections.length === 0) {
             setError("Добавьте хотя бы один раздел")
+            return
+        }
+
+        if (!allBlocksHaveFiles) {
+            setError("Все блоки должны содержать файлы")
             return
         }
 
@@ -131,51 +163,51 @@ export const AddCourse = () => {
             })
             const courseId = courseResponse.id
 
-            // 2. Создаем все секции параллельно
-            const sectionPromises = sections.map(async (section) => {
+            // 2. Создаем все секции
+            for (const section of sections) {
                 const sectionResponse = await courseRepository().createSection(courseId, {
                     title: section.title,
-                    description: ""
+                    description: section.title,
+                    order_number: section.order_number || sections.indexOf(section) + 1
                 })
-                return { ...section, apiId: sectionResponse.id }
-            })
-            const createdSections = await Promise.all(sectionPromises)
 
-            // 3. Загружаем все материалы и задания параллельно
-            const uploadPromises = createdSections.flatMap(section => 
-                section.blocks.map(async (block) => {
-                    if (!block.files || block.files.length === 0) return
+                // 3. Загружаем материалы и задания для секции
+                for (const block of section.blocks) {
+                    if (!block.files?.[0]) continue
 
-                    const file = block.files[0] // Берем первый файл
-                    const formData = new FormData()
-                    formData.append('file', file)
-                    formData.append('description', block.description || '')
-
-                    if (block.type === 'document') {
-                        // Загружаем как задание
-                        const response = await fetch(`/courses/${courseId}/tasks/${section.apiId}`, {
-                            method: 'POST',
-                            body: formData
-                        })
-                        return response.json()
-                    } else {
-                        // Загружаем как материал
-                        const response = await fetch(`/courses/${courseId}/materials/${section.apiId}`, {
-                            method: 'POST',
-                            body: formData
-                        })
-                        return response.json()
+                    const file = block.files[0]
+                    // Проверяем размер файла перед загрузкой
+                    if (file.size > 100 * 1024 * 1024) {
+                        throw new Error('Размер файла не должен превышать 100MB')
                     }
-                })
-            )
 
-            await Promise.all(uploadPromises)
+                    if (block.type === "material") {
+                        await courseRepository().uploadMaterial(courseId, sectionResponse.id, {
+                            title: block.title,
+                            description: block.description || "",
+                            file: file,
+                            order_number: block.order_number || section.blocks.indexOf(block)
+                        })
+                    } else {
+                        await courseRepository().uploadTask(courseId, sectionResponse.id, {
+                            title: block.title,
+                            description: block.description || "",
+                            file: file,
+                            order_number: block.order_number || section.blocks.indexOf(block)
+                        })
+                    }
+                }
+            }
 
             // 4. Перенаправляем на страницу курса
             navigate(`/course/${courseId}`)
         } catch (err) {
             console.error('Ошибка при сохранении курса:', err)
-            setError("Произошла ошибка при сохранении курса. Пожалуйста, попробуйте еще раз.")
+            if (err instanceof Error) {
+                setError(`Не удалось сохранить курс: ${err.message}`)
+            } else {
+                setError('Не удалось сохранить курс')
+            }
         } finally {
             setIsSaving(false)
         }
@@ -184,7 +216,6 @@ export const AddCourse = () => {
     return (
         <>
             <Header />
-
             <div className="flex flex-col w-full h-full">
                 <div className="relative w-full p-4 z-0">
                     <div className="absolute top-0 left-0 w-full p-4 bg-blue-600 h-40 z-0">
@@ -193,7 +224,6 @@ export const AddCourse = () => {
                         </Link>
                     </div>
                 </div>
-
 
                 <div className="grow w-full pt-16 z-10">
                     <div className="w-full">
@@ -216,12 +246,9 @@ export const AddCourse = () => {
                             </div>
                             <div className="mb-4 flex justify-between items-center">
                                 <h2 className="text-2xl font-semibold">Содержание курса</h2>
-                                <div 
-                                    onClick={addSection} 
-                                    className="flex items-center gap-1 text-xs text-blue-600 font-medium bg-blue-100 px-3 py-2 rounded-md cursor-pointer hover:bg-blue-200 transition"
-                                >
+                                <button onClick={addSection} className="flex items-center gap-1 text-xs text-blue-600 font-medium bg-blue-100 px-3 py-2 rounded-md cursor-pointer hover:bg-blue-200 transition">
                                     <Plus className="w-4 h-4" /> Добавить раздел
-                                </div>
+                                </button>
                             </div>
 
                             {sections.length ? (
@@ -265,7 +292,7 @@ export const AddCourse = () => {
                                                                     className="flex items-center gap-4 w-full px-4 py-3 cursor-pointer rounded-xl"
                                                                     onClick={() => setOpenBlocks(prev => ({ ...prev, [block.id]: !isOpen }))}
                                                                 >
-                                                                    {block.type === "video" ? <Video className="w-5 h-5 text-blue-400" /> : <FileText className="w-5 h-5 text-teal-400" />}
+                                                                    {block.type === "material" ? <Video className="w-5 h-5 text-blue-400" /> : <FileText className="w-5 h-5 text-teal-400" />}
                                                                     <input
                                                                         className="font-semibold focus:border-blue-600 bg-transparent outline-none flex-1 transition"
                                                                         value={block.title}
@@ -275,11 +302,11 @@ export const AddCourse = () => {
                                                                     <select
                                                                         className="border rounded px-2 py-1 text-xs"
                                                                         value={block.type}
-                                                                        onChange={e => editBlock(section.id, block.id, block.title, e.target.value as "video" | "document")}
+                                                                        onChange={e => editBlock(section.id, block.id, block.title, e.target.value as "material" | "task")}
                                                                         onClick={e => e.stopPropagation()}
                                                                     >
-                                                                        <option value="video">Лекция</option>
-                                                                        <option value="document">Задание</option>
+                                                                        <option value="material">Материал</option>
+                                                                        <option value="task">Задание</option>
                                                                     </select>
                                                                     <div 
                                                                         onClick={e => { e.stopPropagation(); removeBlock(section.id, block.id) }} 
@@ -306,20 +333,23 @@ export const AddCourse = () => {
                                                                                     className="hidden"
                                                                                     onChange={e => {
                                                                                         if (e.target.files && e.target.files[0]) {
-                                                                                            setSelectedFiles(prev => ({ ...prev, [block.id]: e.target.files![0] }))
+                                                                                            const file = e.target.files[0];
+                                                                                            // Проверяем размер файла (максимум 100MB)
+                                                                                            if (file.size > 100 * 1024 * 1024) {
+                                                                                                alert('Размер файла не должен превышать 100MB');
+                                                                                                return;
+                                                                                            }
+                                                                                            console.log('Выбран файл:', file);
+                                                                                            setSelectedFiles(prev => ({ ...prev, [block.id]: file }));
+                                                                                            // Сразу добавляем файл в блок
+                                                                                            addBlockFile(section.id, block.id, file);
                                                                                         }
                                                                                     }}
                                                                                 />
                                                                             </label>
                                                                             {selectedFiles[block.id] && (
-                                                                                <div
-                                                                                    className="text-xs text-green-700 bg-green-100 px-2 py-1 rounded hover:bg-green-200 ml-2 cursor-pointer"
-                                                                                    onClick={() => {
-                                                                                        addBlockFile(section.id, block.id, selectedFiles[block.id]!)
-                                                                                        setSelectedFiles(prev => ({ ...prev, [block.id]: null }))
-                                                                                    }}
-                                                                                >
-                                                                                    Добавить: {selectedFiles[block.id]?.name}
+                                                                                <div className="text-xs text-green-700 bg-green-100 px-2 py-1 rounded hover:bg-green-200 ml-2">
+                                                                                    Выбран: {selectedFiles[block.id]?.name}
                                                                                 </div>
                                                                             )}
                                                                         </div>
@@ -355,23 +385,25 @@ export const AddCourse = () => {
                                 </div>
                             )}
 
-                            {error && (
-                                <div className="fixed top-4 right-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-                                    {error}
-                                </div>
-                            )}
-
                             {sections.length > 0 && sections.every(section => section.blocks.length > 0) && (
                                 <div className="mt-4 flex justify-end">
                                     <button 
                                         onClick={saveCourse}
-                                        disabled={isSaving}
-                                        className={`bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2 rounded-lg shadow ${
-                                            isSaving ? 'opacity-50 cursor-not-allowed' : ''
+                                        disabled={!allBlocksHaveFiles || isSaving}
+                                        className={`font-semibold px-4 py-2 rounded-lg shadow ${
+                                            allBlocksHaveFiles && !isSaving
+                                                ? 'bg-blue-600 hover:bg-blue-700 text-white' 
+                                                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                                         }`}
                                     >
                                         {isSaving ? 'Сохранение...' : 'Создать курс'}
                                     </button>
+                                </div>
+                            )}
+
+                            {error && (
+                                <div className="mt-4 text-red-500 text-center">
+                                    {error}
                                 </div>
                             )}
                         </div>

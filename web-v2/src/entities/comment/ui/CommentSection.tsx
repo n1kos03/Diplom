@@ -51,11 +51,11 @@ export function CommentsSection({ authorName, courseId, onRatingUpdate }: Commen
           ratingRepository().getAllRatings(),
           userRepository().getAllUsers()
         ])
-        setComments(commentsData)
-        setRatings(ratingsData.filter(rating => rating.course_id === courseId))
+        setComments(commentsData || [])
+        setRatings((ratingsData || []).filter(rating => rating.course_id === courseId))
         
         // Преобразуем массив пользователей в объект для быстрого доступа по id
-        const usersMap = usersData.reduce((acc, user) => {
+        const usersMap = (usersData || []).reduce((acc, user) => {
           acc[user.id] = user
           return acc
         }, {} as Record<number, IUser>)
@@ -77,6 +77,8 @@ export function CommentsSection({ authorName, courseId, onRatingUpdate }: Commen
 
       try {
         const ratings = await ratingRepository().getAllRatings()
+        if (!ratings) return
+        
         const userRating = ratings.find(rating => 
           rating.course_id === courseId && rating.user_id === currentUser.id
         )

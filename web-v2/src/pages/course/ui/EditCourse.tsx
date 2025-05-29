@@ -25,6 +25,7 @@ type Section = {
     title: string
     blocks: Block[]
     apiId?: number
+    order_number?: number
 }
 
 export const EditCourse = () => {
@@ -56,6 +57,8 @@ export const EditCourse = () => {
 
                 // Получаем секции курса
                 const sectionsData = await courseRepository().getSections(Number(id))
+                // Сортируем секции по order_number
+                const sortedSections = sectionsData.sort((a, b) => a.order_number - b.order_number)
                 
                 // Получаем материалы и задания для каждой секции
                 const materials = await courseRepository().getMaterials(Number(id)) || []
@@ -65,7 +68,7 @@ export const EditCourse = () => {
                 setTasksData(tasks)
 
                 // Преобразуем данные в формат для редактирования
-                const formattedSections = sectionsData.map(section => {
+                const formattedSections = sortedSections.map(section => {
                     const sectionMaterials = materials.filter(m => m.section_id === section.id)
                     const sectionTasks = tasks.filter(t => t.section_id === section.id)
 
@@ -73,6 +76,7 @@ export const EditCourse = () => {
                         id: genId(),
                         apiId: section.id,
                         title: section.title,
+                        order_number: section.order_number,
                         blocks: [
                             ...sectionMaterials.map(material => ({
                                 id: genId(),
@@ -113,7 +117,8 @@ export const EditCourse = () => {
         const newSection: Section = {
             id: genId(),
             title: `Раздел ${sections.length + 1}`,
-            blocks: []
+            blocks: [],
+            order_number: sections.length + 1
         }
         setSections([...sections, newSection])
     }
@@ -125,33 +130,25 @@ export const EditCourse = () => {
 
     // Удалить раздел
     const removeSection = (id: string) => {
-        setSections(sections.filter(s => s.id !== id))
+        setSections(sections.filter(s => s.id !== id).map((section, index) => ({
+            ...section,
+            order_number: index + 1
+        })))
     }
 
     // Добавить блок
     const addBlock = (sectionId: string) => {
         setSections(sections.map(s => {
             if (s.id === sectionId) {
-                // Находим максимальный order_number среди существующих блоков
-                const maxOrderNumber = s.blocks.length > 0 
-                    ? Math.max(...s.blocks.map(b => {
-                        if (b.apiId) {
-                            return b.type === "material" 
-                                ? materialsData.find(m => m.id === b.apiId)?.order_number || 0
-                                : tasksData.find(t => t.id === b.apiId)?.order_number || 0
-                        }
-                        return 0
-                    }))
-                    : 0;
-                
+                const newBlock = { 
+                    id: genId(), 
+                    title: `Новый блок ${s.blocks.length + 1}`, 
+                    type: "material" as const,
+                    order_number: s.blocks.length
+                };
                 return { 
                     ...s, 
-                    blocks: [...s.blocks, { 
-                        id: genId(), 
-                        title: "Новый блок", 
-                        type: "material",
-                        order_number: maxOrderNumber + 1
-                    }] 
+                    blocks: [...s.blocks, newBlock] 
                 }
             }
             return s
@@ -162,7 +159,14 @@ export const EditCourse = () => {
     const editBlock = (sectionId: string, blockId: string, newTitle: string, newType: "material" | "task") => {
         setSections(sections.map(s =>
             s.id === sectionId
-                ? { ...s, blocks: s.blocks.map(b => b.id === blockId ? { ...b, title: newTitle, type: newType } : b) }
+                ? { 
+                    ...s, 
+                    blocks: s.blocks.map(b => 
+                        b.id === blockId 
+                            ? { ...b, title: newTitle, type: newType } 
+                            : b
+                    ) 
+                }
                 : s
         ))
     }
@@ -238,6 +242,17 @@ export const EditCourse = () => {
                 description
             })
 
+            // Получаем текущие секции с сервера
+            const currentSections = await courseRepository().getSections(Number(id))
+            
+            // Удаляем секции, которые были удалены пользователем
+            for (const serverSection of currentSections) {
+                if (!sections.some(s => s.apiId === serverSection.id)) {
+                    console.log('Удаляем секцию:', serverSection)
+                    await courseRepository().deleteSection(serverSection.id)
+                }
+            }
+
             // Обновляем секции
             for (const section of sections) {
                 console.log(`Обрабатываем секцию: ${section.title}`)
@@ -247,14 +262,16 @@ export const EditCourse = () => {
                     console.log('Обновляем существующую секцию...')
                     await courseRepository().updateSection(section.apiId, {
                         title: section.title,
-                        description: section.title
+                        description: section.title,
+                        order_number: sections.indexOf(section) + 1
                     })
                 } else {
                     // Создаем новую секцию
                     console.log('Создаем новую секцию...')
                     const newSection = await courseRepository().createSection(Number(id), {
                         title: section.title,
-                        description: section.title
+                        description: section.title,
+                        order_number: sections.indexOf(section) + 1
                     })
                     section.apiId = newSection.id
                 }
@@ -273,7 +290,8 @@ export const EditCourse = () => {
                 for (const block of section.blocks) {
                     console.log(`Обрабатываем блок: ${block.title} (тип: ${block.type})`)
                     
-                    const orderNumber = section.blocks.indexOf(block) + 1;
+                    // Используем индекс блока в массиве section.blocks как order_number
+                    const orderNumber = section.blocks.indexOf(block);
                     
                     if (block.apiId) {
                         // Если блок существует и не изменился, пропускаем его
@@ -309,7 +327,7 @@ export const EditCourse = () => {
                         if (block.type === "material") {
                             await courseRepository().deleteMaterial(Number(id), section.apiId!, block.apiId!)
                         } else {
-                            await courseRepository().deleteTask(block.apiId!)
+                            await courseRepository().deleteTask(Number(id), section.apiId!, block.apiId!)
                         }
                     }
 
@@ -319,7 +337,7 @@ export const EditCourse = () => {
                     try {
                         if (!block.files?.[0]) {
                             console.log('Файл не найден в блоке:', block);
-                            throw new Error('Файл не выбран')
+                            continue;
                         }
 
                         const file = block.files[0];
@@ -373,7 +391,7 @@ export const EditCourse = () => {
                 for (const task of sectionTasks) {
                     if (!section.blocks.some(b => b.apiId === task.id)) {
                         console.log('Удаляем задание:', task)
-                        await courseRepository().deleteTask(task.id)
+                        await courseRepository().deleteTask(Number(id), section.apiId!, task.id)
                     }
                 }
             }
@@ -390,6 +408,11 @@ export const EditCourse = () => {
             }
         }
     }
+
+    // Проверяем, все ли блоки имеют файлы
+    const allBlocksHaveFiles = sections.every(section => 
+        section.blocks.every(block => block.files?.[0] || block.apiId)
+    )
 
     if (isLoading) {
         return (
@@ -538,28 +561,30 @@ export const EditCourse = () => {
                                                                                 onChange={e => editBlockDescription(section.id, block.id, e.target.value)}
                                                                             />
                                                                             <div className="mb-2 flex items-center gap-2">
-                                                                                <label className="flex items-center gap-2 cursor-pointer text-blue-600 font-medium hover:underline">
-                                                                                    <Paperclip className="w-5 h-5" />
-                                                                                    <span>Добавить файл</span>
-                                                                                    <input
-                                                                                        type="file"
-                                                                                        className="hidden"
-                                                                                        onChange={e => {
-                                                                                            if (e.target.files && e.target.files[0]) {
-                                                                                                const file = e.target.files[0];
-                                                                                                // Проверяем размер файла (максимум 100MB)
-                                                                                                if (file.size > 100 * 1024 * 1024) {
-                                                                                                    alert('Размер файла не должен превышать 100MB');
-                                                                                                    return;
+                                                                                {!block.apiId && (
+                                                                                    <label className="flex items-center gap-2 cursor-pointer text-blue-600 font-medium hover:underline">
+                                                                                        <Paperclip className="w-5 h-5" />
+                                                                                        <span>Добавить файл</span>
+                                                                                        <input
+                                                                                            type="file"
+                                                                                            className="hidden"
+                                                                                            onChange={e => {
+                                                                                                if (e.target.files && e.target.files[0]) {
+                                                                                                    const file = e.target.files[0];
+                                                                                                    // Проверяем размер файла (максимум 100MB)
+                                                                                                    if (file.size > 100 * 1024 * 1024) {
+                                                                                                        alert('Размер файла не должен превышать 100MB');
+                                                                                                        return;
+                                                                                                    }
+                                                                                                    console.log('Выбран файл:', file);
+                                                                                                    setSelectedFiles(prev => ({ ...prev, [block.id]: file }));
+                                                                                                    // Сразу добавляем файл в блок
+                                                                                                    addBlockFile(section.id, block.id, file);
                                                                                                 }
-                                                                                                console.log('Выбран файл:', file);
-                                                                                                setSelectedFiles(prev => ({ ...prev, [block.id]: file }));
-                                                                                                // Сразу добавляем файл в блок
-                                                                                                addBlockFile(section.id, block.id, file);
-                                                                                            }
-                                                                                        }}
-                                                                                    />
-                                                                                </label>
+                                                                                            }}
+                                                                                        />
+                                                                                    </label>
+                                                                                )}
                                                                                 {selectedFiles[block.id] && (
                                                                                     <div className="text-xs text-green-700 bg-green-100 px-2 py-1 rounded hover:bg-green-200 ml-2">
                                                                                         Выбран: {selectedFiles[block.id]?.name}
@@ -602,7 +627,12 @@ export const EditCourse = () => {
                                 <div className="mt-4 flex justify-end">
                                     <button 
                                         onClick={saveCourse}
-                                        className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2 rounded-lg shadow"
+                                        disabled={!allBlocksHaveFiles}
+                                        className={`font-semibold px-4 py-2 rounded-lg shadow ${
+                                            allBlocksHaveFiles 
+                                                ? 'bg-blue-600 hover:bg-blue-700 text-white' 
+                                                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                        }`}
                                     >
                                         Сохранить изменения
                                     </button>

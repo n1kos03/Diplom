@@ -47,7 +47,7 @@ export const Course = () => {
 
                 // Получаем секции курса
                 const sectionsData = await courseRepository().getSections(Number(id))
-                setSections(sectionsData)
+                setSections(sectionsData.sort((a, b) => a.order_number - b.order_number))
 
                 // Получаем материалы и задания для каждой секции
                 const materialsData = await courseRepository().getMaterials(Number(id))
@@ -70,7 +70,7 @@ export const Course = () => {
                     const subscriptions = await courseRepository().getSubscriptions()
                     // Проверяем подписку только для текущего пользователя
                     const userStr = localStorage.getItem('user')
-                    if (userStr) {
+                    if (userStr && subscriptions) {
                         const user = JSON.parse(userStr)
                         const courseSubscription = subscriptions.find(s => 
                             s.course_id === Number(id) && 
@@ -221,10 +221,16 @@ export const Course = () => {
                             </div>
 
                             <div className="flex items-center">
-                                <StarRating rating={course.rating || 0} totalStars={5} />
-                                <span className="ml-2 text-sm text-gray-500">
-                                    {course.rating || 0}
-                                </span>
+                                {course.rating && course.rating > 0 ? (
+                                    <>
+                                        <StarRating rating={course.rating} totalStars={5} />
+                                        <span className="ml-2 text-sm text-gray-500">
+                                            {course.rating}
+                                        </span>
+                                    </>
+                                ) : (
+                                    <span className="text-sm text-gray-500">Нет оценок</span>
+                                )}
                             </div>
                         </div>
 
@@ -253,7 +259,26 @@ export const Course = () => {
                                 {sections?.map((section, index) => {
                                     const sectionMaterials = materials?.filter(m => m.section_id === section.id)
                                         .sort((a, b) => a.order_number - b.order_number) || []
-                                    const sectionTasks = tasks?.filter(t => t.section_id === section.id) || []
+                                    const sectionTasks = tasks?.filter(t => t.section_id === section.id)
+                                        .sort((a, b) => a.order_number - b.order_number) || []
+                                    
+                                    // Объединяем материалы и задачи в один массив, сохраняя их порядок
+                                    const sortedLectures = [
+                                        ...sectionMaterials.map(material => ({
+                                            title: material.title,
+                                            type: "material" as const,
+                                            content_url: material.content_url,
+                                            description: material.description,
+                                            order_number: material.order_number
+                                        })),
+                                        ...sectionTasks.map(task => ({
+                                            title: task.title,
+                                            type: "task" as const,
+                                            content_url: task.content_url,
+                                            description: task.description,
+                                            order_number: task.order_number
+                                        }))
+                                    ].sort((a, b) => a.order_number - b.order_number);
                                     
                                     return (
                                         <CourseSection 
@@ -261,20 +286,7 @@ export const Course = () => {
                                             index={index} 
                                             title={section.title}
                                             onExpand={() => {}}
-                                            lectures={[
-                                                ...sectionMaterials.map(material => ({
-                                                    title: material.title,
-                                                    type: "material" as const,
-                                                    content_url: material.content_url,
-                                                    description: material.description
-                                                })),
-                                                ...sectionTasks.map(task => ({
-                                                    title: task.title,
-                                                    type: "task" as const,
-                                                    content_url: task.content_url,
-                                                    description: task.description
-                                                }))
-                                            ]}
+                                            lectures={sortedLectures}
                                         />
                                     )
                                 })}

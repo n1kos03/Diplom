@@ -23,8 +23,14 @@ function CourseCard({ course }: { course: ICourse }) {
             <CardContent className="pt-6 flex-grow">
                 <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center">
-                        <StarRating rating={course.rating} totalStars={5} />
-                        <span className="ml-1 text-sm">{course.rating}</span>
+                        {course.rating && course.rating > 0 ? (
+                            <>
+                                <StarRating rating={course.rating} totalStars={5} />
+                                <span className="ml-1 text-sm">{course.rating}</span>
+                            </>
+                        ) : (
+                            <span className="text-sm text-gray-500">Нет оценок</span>
+                        )}
                     </div>
                 </div>
                 <h3 className="font-bold text-lg mb-2 line-clamp-2">{course.title}</h3>
@@ -36,11 +42,6 @@ function CourseCard({ course }: { course: ICourse }) {
                     <span>Создано: {formattedDate}</span>
                 </div>
             </CardContent>
-            <div className="border-t border-gray-200 pt-4 flex justify-between items-center px-6 pb-4">
-                <div className="flex items-center text-sm text-gray-500">
-                    <span>{course.subscribers_count || 0} {course.subscribers_count === 1 ? "подписчик" : "подписчиков"}</span>
-                </div>
-            </div>
         </Card>
     )
 }

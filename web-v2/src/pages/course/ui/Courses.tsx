@@ -114,7 +114,7 @@ export const Courses = () => {
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
                 <Input
-                  placeholder="Поиск по вашим курсам..."
+                  placeholder="Поиск курсов..."
                   className="pl-10"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
@@ -164,8 +164,14 @@ function CourseCard({ course }: CourseCardProps) {
         <CardContent className="pt-6 flex-grow">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center">
-              <StarRating rating={course.rating} totalStars={5} />
-              <span className="ml-1 text-sm">{course.rating}</span>
+              {course.rating && course.rating > 0 ? (
+                <>
+                  <StarRating rating={course.rating} totalStars={5} />
+                  <span className="ml-1 text-sm">{course.rating}</span>
+                </>
+              ) : (
+                <span className="text-sm text-gray-500">Нет оценок</span>
+              )}
             </div>
           </div>
           <h3 className="font-bold text-lg mb-2 line-clamp-2">{course.title}</h3>

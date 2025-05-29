@@ -32,16 +32,19 @@ export interface ISection {
     course_id: number;
     title: string;
     description: string;
+    order_number: number;
 }
 
 export interface ICreateSectionData {
     title: string;
     description: string;
+    order_number: number;
 }
 
 export interface IUpdateSectionData {
     title?: string;
     description?: string;
+    order_number?: number;
 }
 
 export interface ISectionResponse {
