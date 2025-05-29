@@ -109,8 +109,8 @@ func POSTTaskReviewHandler(w http.ResponseWriter, r *http.Request, ps httprouter
 // - id: the ID of the deleted task review
 //
 // If an error occurs during data retrieval or processing, it responds with an appropriate HTTP error status.
-func DELETETaskReviewHandler(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-	taskReviewID, err := strconv.Atoi(r.FormValue("id"))
+func DELETETaskReviewHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	taskReviewID, err := strconv.Atoi(ps.ByName("review_id"))
 	if err != nil {
 		http.Error(w, "Error converting course ID to int", http.StatusInternalServerError)
 		return

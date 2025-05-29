@@ -121,8 +121,8 @@ func POSTCommentHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Pa
 // It returns a JSON response with the following fields:
 // - message: a message indicating that the comment was deleted successfully
 // - id: the ID of the deleted comment
-func DELETECommentHandler(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-	commentID, err := strconv.Atoi(r.URL.Query().Get("id"))
+func DELETECommentHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	commentID, err := strconv.Atoi(ps.ByName("comment_id"))
 	if err != nil {
 		http.Error(w, "Error converting data to int", http.StatusInternalServerError)
 		return

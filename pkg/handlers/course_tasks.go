@@ -221,8 +221,8 @@ func PUTCourseTasksHandler(w http.ResponseWriter, r *http.Request, ps httprouter
 // - url: the URL of the deleted task
 //
 // If an error occurs during data retrieval or processing, it responds with an appropriate HTTP error status.
-func DELETECourseTasksHandler(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-	taskID, err := strconv.Atoi(r.FormValue("id"))
+func DELETECourseTasksHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	taskID, err := strconv.Atoi(ps.ByName("task_id"))
 	if err != nil {
 		http.Error(w, "Error converting course ID to int", http.StatusInternalServerError)
 		return

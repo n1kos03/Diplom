@@ -111,7 +111,7 @@ func POSTSubscriptionHandler(w http.ResponseWriter, r *http.Request, _ httproute
 // - course_id: the ID of the course from which the user unsubscribed
 //
 // If an error occurs during data retrieval or processing, it responds with an appropriate HTTP error status.
-func DELETESubscriptionHandler(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+func DELETESubscriptionHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	if r.Method != http.MethodDelete {
 		http.Error(w, "Invalid method", http.StatusMethodNotAllowed)
 		return
@@ -128,7 +128,7 @@ func DELETESubscriptionHandler(w http.ResponseWriter, r *http.Request, _ httprou
 
 	userID := int(userIDRow)
 	
-	courseID, err := strconv.Atoi(r.FormValue("course_id"))
+	courseID, err := strconv.Atoi(ps.ByName("course_id"))
 	if err != nil {
 		http.Error(w, "Error converting data to int", http.StatusInternalServerError)
 		return

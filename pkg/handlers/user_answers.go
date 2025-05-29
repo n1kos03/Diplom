@@ -158,8 +158,8 @@ func POSTUserAnswerHandler(w http.ResponseWriter, r *http.Request, ps httprouter
 // - url: the URL of the deleted answer
 //
 // If an error occurs during data retrieval or processing, it responds with an appropriate HTTP error status.
-func DELETEUserAnswerHandler(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-	answerID, err := strconv.Atoi(r.FormValue("id"))
+func DELETEUserAnswerHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	answerID, err := strconv.Atoi(ps.ByName("answer_id"))
 	if err != nil {
 		http.Error(w, "Error converting course ID to int", http.StatusInternalServerError)
 		return

@@ -224,8 +224,8 @@ func PUTCourseMaterialsHandler(w http.ResponseWriter, r *http.Request, ps httpro
 // - url: the URL of the deleted material
 //
 // If an error occurs during data retrieval or processing, it responds with an appropriate HTTP error status.
-func DELETECourseMaterialsHandler(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-	materialID, err := strconv.Atoi(r.FormValue("id"))
+func DELETECourseMaterialsHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	materialID, err := strconv.Atoi(ps.ByName("material_id"))
 	if err != nil {
 		http.Error(w, "Error converting course ID to int", http.StatusInternalServerError)
 		return

@@ -49,17 +49,17 @@ func main() {
 
 	router.GET("/courses/:id/comments/", handlers.GETCommentsHandler)
 	router.POST("/courses/:id/comments/", handlers.POSTCommentHandler)
-	router.DELETE("/courses/:id/comments/", handlers.DELETECommentHandler)
+	router.DELETE("/courses/:id/comments/:comment_id/", handlers.DELETECommentHandler)
 
 	router.GET("/courses/:id/materials/", handlers.GETCourseMaterialsHandler)
 	router.POST("/courses/:id/materials-upload/:section_id/", handlers.POSTCourseMaterialsHandler)
 	router.PUT("/courses/:id/materials/:section_id/:material_id/", handlers.PUTCourseMaterialsHandler)
-	router.DELETE("/courses/:id/materials/:section_id/", handlers.DELETECourseMaterialsHandler)
+	router.DELETE("/courses/:id/materials/:section_id/:material_id/", handlers.DELETECourseMaterialsHandler)
 
 	router.GET("/courses/:id/tasks/", handlers.GETCourseTasksHandler)
 	router.POST("/courses/:id/tasks-upload/:section_id/", handlers.POSTCourseTasksHandler)
 	router.PUT("/courses/:id/tasks/:section_id/:task_id/", handlers.PUTCourseTasksHandler)
-	router.DELETE("/courses/:id/tasks/:section_id/", handlers.DELETECourseTasksHandler)
+	router.DELETE("/courses/:id/tasks/:section_id/:task_id/", handlers.DELETECourseTasksHandler)
 
 	router.GET("/courses/", handlers.GETCoursesHandler)
 	router.GET("/courses/:id/", handlers.GETCourseByID)
@@ -68,7 +68,7 @@ func main() {
 	
 	router.GET("/subscriptions/", handlers.GETSubscriptionsHandler)
 	router.POST("/subscriptions/", handlers.POSTSubscriptionHandler)
-	router.DELETE("/subscriptions/", handlers.DELETESubscriptionHandler)
+	router.DELETE("/subscriptions/:course_id/", handlers.DELETESubscriptionHandler)
 
 	router.GET("/users/", handlers.GETUsersHandler)
 	router.GET("/users/:id/", handlers.GETUserByID)
@@ -92,11 +92,11 @@ func main() {
 
 	router.GET("/courses/:id/answers/:task_id/", handlers.GETUserAnswersHandler)
 	router.POST("/courses/:id/answers/:task_id/", handlers.POSTUserAnswerHandler)
-	router.DELETE("/courses/:id/answers/:task_id/", handlers.DELETEUserAnswerHandler)
+	router.DELETE("/courses/:id/answers/:task_id/:answer_id/", handlers.DELETEUserAnswerHandler)
 
 	router.GET("/task_reviews/:answer_id/", handlers.GETTaskReviewsHandler)
 	router.POST("/task_reviews/:answer_id/", handlers.POSTTaskReviewHandler)
-	router.DELETE("/task_reviews/:answer_id/", handlers.DELETETaskReviewHandler)
+	router.DELETE("/task_reviews/:answer_id/:review_id/", handlers.DELETETaskReviewHandler)
 
 	handler := cors.New(cors.Options{
 		AllowedOrigins: []string{"http://localhost:5173", "http://127.0.0.1:5173", "http://localhost:3000", "http://127.0.0.1:3000"},
