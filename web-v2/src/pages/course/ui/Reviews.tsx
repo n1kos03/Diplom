@@ -39,9 +39,9 @@ export const Reviews = () => {
                 }
 
                 const answersData = await courseRepository().getAnswers(Number(courseId), Number(taskId));
-                setAnswers(answersData);
+                setAnswers(answersData || []);
 
-                const reviewsPromises = answersData.map(answer =>
+                const reviewsPromises = (answersData || []).map(answer =>
                     courseRepository().getReview(answer.id)
                 );
                 const reviewsData = await Promise.all(reviewsPromises);
