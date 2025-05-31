@@ -172,12 +172,51 @@ export const EditCourse = () => {
     }
 
     // Удалить блок
-    const removeBlock = (sectionId: string, blockId: string) => {
-        setSections(sections.map(s =>
-            s.id === sectionId
-                ? { ...s, blocks: s.blocks.filter(b => b.id !== blockId) }
-                : s
-        ))
+    const removeBlock = async (sectionId: string, blockId: string) => {
+        // Находим блок и секцию
+        const section = sections.find(s => s.id === sectionId);
+        const block = section?.blocks.find(b => b.id === blockId);
+
+        if (!section || !block) return;
+
+        try {
+            // Если у блока есть apiId, значит он существует на сервере и его нужно удалить
+            if (block.apiId && section.apiId) {
+                if (block.type === "material") {
+                    await courseRepository().deleteMaterial(Number(id), section.apiId, block.apiId);
+                } else {
+                    // Для задания нужно сначала получить все ответы
+                    const answers = await courseRepository().getAnswers(block.apiId);
+                    
+                    // Для каждого ответа удаляем отзыв (если есть) и сам ответ
+                    for (const answer of answers) {
+                        // Получаем отзыв для ответа
+                        const review = await courseRepository().getReview(answer.id);
+                        
+                        // Если есть отзыв, удаляем его
+                        if (review) {
+                            await courseRepository().deleteReview(answer.id, review.id);
+                        }
+                        
+                        // Удаляем ответ
+                        await courseRepository().deleteAnswer(Number(id), block.apiId, answer.id);
+                    }
+                    
+                    // После удаления всех ответов и отзывов удаляем само задание
+                    await courseRepository().deleteTask(Number(id), section.apiId, block.apiId);
+                }
+            }
+
+            // Удаляем блок из локального состояния
+            setSections(sections.map(s =>
+                s.id === sectionId
+                    ? { ...s, blocks: s.blocks.filter(b => b.id !== blockId) }
+                    : s
+            ));
+        } catch (err) {
+            console.error('Ошибка при удалении блока:', err);
+            alert('Не удалось удалить блок. Пожалуйста, попробуйте еще раз.');
+        }
     }
 
     // Редактировать описание блока
@@ -545,7 +584,10 @@ export const EditCourse = () => {
                                                                             <option value="task">Задание</option>
                                                                         </select>
                                                                         <div 
-                                                                            onClick={e => { e.stopPropagation(); removeBlock(section.id, block.id) }} 
+                                                                            onClick={async (e) => { 
+                                                                                e.stopPropagation(); 
+                                                                                await removeBlock(section.id, block.id);
+                                                                            }} 
                                                                             className="-mr-2 flex items-center gap-1 text-xs text-red-600 bg-red-100 px-2 py-1 rounded-md cursor-pointer hover:bg-red-200 transition"
                                                                         >
                                                                             <Trash2 className="w-4 h-4" />

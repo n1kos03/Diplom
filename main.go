@@ -96,6 +96,7 @@ func main() {
 
 	router.GET("/task_reviews/:answer_id/", handlers.GETTaskReviewsHandler)
 	router.POST("/task_reviews/:answer_id/", handlers.POSTTaskReviewHandler)
+	router.PUT("/task_reviews/:answer_id/:review_id/", handlers.PUTTaskReviewHandler)
 	router.DELETE("/task_reviews/:answer_id/:review_id/", handlers.DELETETaskReviewHandler)
 
 	handler := cors.New(cors.Options{

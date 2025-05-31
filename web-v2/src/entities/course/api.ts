@@ -97,7 +97,7 @@ export const courseRepository = () => {
         },
 
         deleteMaterial(courseId: number, sectionId: number, materialId: number): Promise<IMaterialResponse> {
-            return apiInstance.remove(`/courses/${courseId}/materials/${sectionId}/${materialId}`);
+            return apiInstance.remove(`/courses/${courseId}/materials/${sectionId}/${materialId}/`);
         },
 
         // Subscription methods
@@ -168,12 +168,40 @@ export const courseRepository = () => {
         },
 
         deleteTask(courseId: number, sectionId: number, taskId: number): Promise<ITaskResponse> {
-            return apiInstance.remove(`/courses/${courseId}/tasks/${sectionId}/${taskId}`);
+            return apiInstance.remove(`/courses/${courseId}/tasks/${sectionId}/${taskId}/`);
         },
 
         // User Answers methods
         getAnswers(taskId: number): Promise<IUserAnswer[]> {
-            return apiInstance.get(`/courses/answers/${taskId}`);
+            // Получаем courseId из URL текущей страницы
+            const courseId = window.location.pathname.split('/')[2];
+            return apiInstance.get<IUserAnswer[]>(`/courses/${courseId}/answers/${taskId}`).then(answers => {
+                // Получаем текущего пользователя
+                const userStr = localStorage.getItem('user');
+                if (!userStr) return answers;
+
+                try {
+                    const userData = JSON.parse(userStr);
+                    const currentUser = userData.user;
+
+                    // Если у нас есть информация о курсе, проверяем является ли пользователь автором
+                    const courseStr = localStorage.getItem(`course_${courseId}`);
+                    if (courseStr) {
+                        const courseData = JSON.parse(courseStr);
+                        // Если пользователь автор курса, возвращаем все ответы
+                        if (courseData.author_id === currentUser.id) {
+                            return answers;
+                        }
+                    }
+
+                    // Если пользователь не автор или информация о курсе недоступна,
+                    // возвращаем только ответы текущего пользователя
+                    return answers.filter(answer => answer.user_id === currentUser.id);
+                } catch (e) {
+                    console.error('Error parsing user data:', e);
+                    return answers;
+                }
+            });
         },
 
         uploadAnswer(courseId: number, taskId: number, answerData: ICreateAnswerData): Promise<IAnswerResponse> {
@@ -187,21 +215,65 @@ export const courseRepository = () => {
             });
         },
 
-        deleteAnswer(answerId: number): Promise<IAnswerResponse> {
-            return apiInstance.post(`/courses/answers/${answerId}/delete`);
+        deleteAnswer(courseId: number, taskId: number, answerId: number): Promise<IAnswerResponse> {
+            return apiInstance.remove(`/courses/${courseId}/answers/${taskId}/${answerId}`);
         },
 
         // Task Reviews methods
-        getReview(answerId: number): Promise<ITaskReview> {
-            return apiInstance.get(`/task_reviews/${answerId}`);
+        getReview(answerId: number): Promise<ITaskReview | null> {
+            if (!answerId) return Promise.resolve(null);
+            return apiInstance.get<ITaskReview>(`/task_reviews/${answerId}`);
         },
 
         createReview(answerId: number, reviewData: ICreateReviewData): Promise<IReviewResponse> {
-            return apiInstance.post(`/task_reviews/${answerId}`, reviewData);
+            return apiInstance.post<IReviewResponse>(`/task_reviews/${answerId}`, reviewData);
         },
 
-        deleteReview(reviewId: number): Promise<IReviewResponse> {
-            return apiInstance.post(`/task_reviews/${reviewId}/delete`);
+        updateReview(answerId: number, reviewId: number, reviewData: ICreateReviewData): Promise<IReviewResponse> {
+            return apiInstance.put<IReviewResponse>(`/task_reviews/${answerId}/${reviewId}`, reviewData);
+        },
+
+        deleteReview(answerId: number, reviewId: number): Promise<IReviewResponse> {
+            return apiInstance.remove<IReviewResponse>(`/task_reviews/${answerId}/${reviewId}`);
+        },
+
+        // Task methods
+        getTaskById(taskId: number): Promise<ICourseTask> {
+            // Получаем courseId из URL текущей страницы
+            const courseId = window.location.pathname.split('/')[2];
+            // Получаем задание из списка всех заданий курса
+            return apiInstance.get<ICourseTask[]>(`/courses/${courseId}/tasks`).then((tasks) => {
+                const task = tasks.find(t => t.id === taskId);
+                if (!task) {
+                    throw new Error('Task not found');
+                }
+                return task;
+            });
+        },
+
+        // Answer methods
+        submitAnswer(courseId: number, taskId: number, answerData: ICreateAnswerData): Promise<IAnswerResponse> {
+            const formData = new FormData();
+            formData.append('file', answerData.file);
+
+            return apiInstance.post(`/courses/${courseId}/answers/${taskId}`, formData, {
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                },
+            });
+        },
+
+        getAnswerForTask(taskId: number): Promise<IUserAnswer | null> {
+            // Получаем courseId из URL текущей страницы
+            const courseId = window.location.pathname.split('/')[2];
+            return this.getAnswers(taskId).then(answers => {
+                // Возвращаем первый ответ, если он есть
+                return answers.length > 0 ? answers[0] : null;
+            });
+        },
+
+        getReviewForAnswer(answerId: number): Promise<ITaskReview | null> {
+            return apiInstance.get(`/task_reviews/${answerId}`);
         }
     }
 }
