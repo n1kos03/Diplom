@@ -68,13 +68,14 @@ export const Course = () => {
                     const answersMap: Record<number, IUserAnswer[]> = {}
                     tasksData.forEach((task, index) => {
                         // Фильтруем ответы только текущего пользователя
-                        answersMap[task.id] = answersResults[index].filter(answer => answer.user_id === currentUser.id)
+                        answersMap[task.id] = (answersResults[index] || [])
+                            .filter(answer => answer.user_id === currentUser.id)
                     })
                     setUserAnswers(answersMap)
 
                     // Загружаем ревью для ответов пользователя
                     const reviewsPromises = answersResults.flatMap(answers => 
-                        answers
+                        (answers || [])
                             .filter(answer => answer.user_id === currentUser.id)
                             .map(answer => courseRepository().getReview(answer.id))
                     )
@@ -218,6 +219,13 @@ export const Course = () => {
                 const newAnswers = { ...prev }
                 newAnswers[taskId] = updatedAnswers
                 return newAnswers
+            })
+
+            // Удаляем ревью для удаленного ответа
+            setReviews(prev => {
+                const newReviews = { ...prev }
+                delete newReviews[answerId]
+                return newReviews
             })
 
             setNotification({
