@@ -59,7 +59,7 @@ export const Course = () => {
                 setTasks(tasksData)
 
                 // Загружаем ответы пользователя для всех заданий только если пользователь не автор
-                if (currentUser && currentUser.id !== courseData.author_id) {
+                if (currentUser && currentUser.id !== courseData.author_id && tasksData) {
                     const answersPromises = tasksData.map(task =>
                         courseRepository().getAnswers(Number(id), task.id)
                     )

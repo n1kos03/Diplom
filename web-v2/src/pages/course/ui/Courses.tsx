@@ -125,9 +125,7 @@ export const Courses = () => {
             {/* Сетка карточек курсов */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredCourses.map((course) => (
-                <Link to={`/course/${course.id}`} key={course.id}>
-                  <CourseCard key={course.id} course={course} />
-                </Link>
+                <CourseCard key={course.id} course={course} />
               ))}
             </div>
           </>
