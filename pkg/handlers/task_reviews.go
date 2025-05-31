@@ -99,6 +99,58 @@ func POSTTaskReviewHandler(w http.ResponseWriter, r *http.Request, ps httprouter
 	})
 }
 
+func PUTTaskReviewHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	if r.Method != http.MethodPut {
+		http.Error(w, "Invalid method", http.StatusMethodNotAllowed)
+		return
+	}
+	
+	var task_review models.TaskReview
+	var err error
+
+	task_review.AnswerID, err = strconv.Atoi(ps.ByName("answer_id"))
+	if err != nil {
+		http.Error(w, "Error converting course ID to int", http.StatusInternalServerError)
+		return
+	}
+
+	task_review.ID, err = strconv.Atoi(ps.ByName("review_id"))
+	if err != nil {
+		http.Error(w, "Error converting course ID to int", http.StatusInternalServerError)
+		return
+	}
+
+	err = json.NewDecoder(r.Body).Decode(&task_review)
+	if err != nil {
+		http.Error(w, "Error decoding data", http.StatusInternalServerError)
+		log.Println("Error decoding data: ", err)
+		return
+	}
+
+	if task_review.Grade != 0 {
+		_, err = database.DB.Exec(`UPDATE task_reviews SET grade = $1 WHERE id = $2`, task_review.Grade, task_review.ID)
+		if err != nil {
+			http.Error(w, "Error updating data", http.StatusInternalServerError)
+			return
+		}
+	}
+
+	if task_review.AuthorComment != "" {
+		_, err = database.DB.Exec(`UPDATE task_reviews SET author_comment = $1 WHERE id = $2`, task_review.AuthorComment, task_review.ID)
+		if err != nil {
+			http.Error(w, "Error updating data", http.StatusInternalServerError)
+			return
+		}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"message": "Task review updated",
+		"id": task_review.ID,
+	})
+}
+
 // DELETETaskReviewHandler deletes a task review by ID.
 //
 // The handler expects a single parameter:

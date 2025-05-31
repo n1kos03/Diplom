@@ -225,28 +225,90 @@ func DELETECourseTasksHandler(w http.ResponseWriter, r *http.Request, ps httprou
 	taskID, err := strconv.Atoi(ps.ByName("task_id"))
 	if err != nil {
 		http.Error(w, "Error converting course ID to int", http.StatusInternalServerError)
+		log.Println("Error converting course ID to int: ", err)
 		return
+	}
+
+	// Getting all answers on the task
+	var answersOnTask []models.UserAnswer
+
+	rows, err := database.DB.Query(`SELECT * FROM user_answer WHERE task_id = $1`, taskID)
+	if err != nil {
+		http.Error(w, "Error getting data", http.StatusInternalServerError)
+		log.Println("Error getting data: ", err)
+		return
+	}
+
+	for rows.Next() {
+		var answer models.UserAnswer
+
+		err := rows.Scan(&answer.ID, &answer.TaskID, &answer.UserID, &answer.ContentURL, &answer.CreatedAt)
+		if err != nil {
+			http.Error(w, "Error scanning data", http.StatusInternalServerError)
+			log.Println("Error scanning data: ", err)
+			return
+		}
+
+		answersOnTask = append(answersOnTask, answer)
+	}
+
+	if err = rows.Err(); err != nil {
+		http.Error(w, "Error iterating over rows", http.StatusInternalServerError)
+		log.Println("Error iterating over rows: ", err)
+		return
+	}
+	
+	// Deleting reviews for each answer
+	for _, answer := range answersOnTask {
+		_, err = database.DB.Exec(`DELETE FROM task_reviews WHERE answer_id = $1`, answer.ID)
+		if err != nil {
+			http.Error(w, "Error deleting data", http.StatusInternalServerError)
+			log.Println("Error deleting data: ", err)
+			return
+		}
+
+		// Deleting answer from minio and database
+		contentURLNamesPart := strings.TrimPrefix(answer.ContentURL, "http://localhost:9000/")
+		bucketNameObjectName := strings.Split(contentURLNamesPart, "/")
+
+		err = objStor.MinioClient.RemoveObject(context.Background(), bucketNameObjectName[0], bucketNameObjectName[1], minio.RemoveObjectOptions{})
+		if err != nil {
+			http.Error(w, "Error removing object", http.StatusInternalServerError)
+			log.Println("Error removing object: ", err)
+			return
+		}
+
+		_, err = database.DB.Exec(`DELETE FROM user_answer WHERE id = $1`, answer.ID)
+		if err != nil {
+			http.Error(w, "Error deleting data", http.StatusInternalServerError)
+			log.Println("Error deleting data: ", err)
+			return
+		}
 	}
 
 	var contentURL string
 	err = database.DB.QueryRow(`SELECT content_url FROM course_task WHERE id = $1`, taskID).Scan(&contentURL)
 	if err != nil {
 		http.Error(w, "Error getting data while deleting", http.StatusInternalServerError)
+		log.Println("Error getting data while deleting: ", err)
 		return
 	}
 
+	// Deleting task from minio and database
 	contentURLNamesPart := strings.TrimPrefix(contentURL, "http://localhost:9000/")
 	bucketNameObjectName := strings.Split(contentURLNamesPart, "/")
 
 	err = objStor.MinioClient.RemoveObject(context.Background(), bucketNameObjectName[0], bucketNameObjectName[1], minio.RemoveObjectOptions{})
 	if err != nil {
 		http.Error(w, "Error removing object", http.StatusInternalServerError)
+		log.Println("Error removing object: ", err)
 		return
 	}
 
 	_, err = database.DB.Exec(`DELETE FROM course_task WHERE id = $1`, taskID)
 	if err != nil {
 		http.Error(w, "Error deleting data", http.StatusInternalServerError)
+		log.Println("Error deleting data: ", err)
 		return
 	}
 
