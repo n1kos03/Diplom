@@ -48,6 +48,10 @@ export const userRepository = () => {
 
         deletePhoto(userId: number): Promise<IPhotoResponse> {
             return apiInstance.post(`/users/${userId}/user_photos/delete`);
+        },
+
+        getUserSubscriptions(userId: number): Promise<{ course_id: number }[]> {
+            return apiInstance.get(`/subscriptions/${userId}`);
         }
     }
 }

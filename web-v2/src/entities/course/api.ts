@@ -123,14 +123,7 @@ export const courseRepository = () => {
         },
 
         unsubscribeFromCourse(courseId: number): Promise<ISubscriptionResponse> {
-            const formData = new FormData();
-            formData.append('course_id', courseId.toString());
-            return apiInstance.remove(`/subscriptions`, {
-                data: formData,
-                headers: {
-                    'Content-Type': 'multipart/form-data',
-                },
-            });
+            return apiInstance.remove(`/subscriptions/${courseId}`);
         },
 
         // Course Tasks methods

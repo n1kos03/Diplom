@@ -77,6 +77,7 @@ export const User = () => {
     const [editedName, setEditedName] = useState("")
     const [userPhotos, setUserPhotos] = useState<IUserPhoto[]>([]);
     const [userCourses, setUserCourses] = useState<ICourse[]>([]);
+    const [userSubscriptions, setUserSubscriptions] = useState<ICourse[]>([]);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
@@ -88,6 +89,7 @@ export const User = () => {
                 setEditedName(userData.nickname)
                 await fetchUserPhotos();
                 await fetchUserCourses();
+                await fetchUserSubscriptions();
             } catch (error) {
                 console.error('Ошибка при получении данных пользователя:', error)
             } finally {
@@ -117,6 +119,30 @@ export const User = () => {
             setUserCourses(userCourses);
         } catch (error) {
             console.error('Ошибка при получении курсов пользователя:', error);
+        }
+    };
+
+    const fetchUserSubscriptions = async () => {
+        try {
+            if (!id) return;
+            const subscriptions = await userRepository().getUserSubscriptions(Number(id));
+            const allCourses = await courseRepository().getAllCourses();
+            
+            // Проверяем, что subscriptions существует и является массивом
+            if (!subscriptions || !Array.isArray(subscriptions)) {
+                setUserSubscriptions([]);
+                return;
+            }
+            
+            // Получаем полную информацию о курсах из подписок
+            const subscribedCourses = subscriptions.map(sub => 
+                allCourses.find(course => course.id === sub.course_id)
+            ).filter((course): course is ICourse => course !== undefined);
+            
+            setUserSubscriptions(subscribedCourses);
+        } catch (error) {
+            console.error('Ошибка при получении подписок пользователя:', error);
+            setUserSubscriptions([]); // Устанавливаем пустой массив в случае ошибки
         }
     };
 
@@ -189,6 +215,23 @@ export const User = () => {
                     ) : (
                         <div className="col-span-2 text-center py-8 text-gray-500">
                             Нет доступных курсов
+                        </div>
+                    )}
+                </div>
+            ),
+        },
+        {
+            id: "subscriptions",
+            label: "Подписки",
+            content: (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                    {userSubscriptions && userSubscriptions.length > 0 ? (
+                        userSubscriptions.map((course) => (
+                            <CourseCard key={course.id} course={course} />
+                        ))
+                    ) : (
+                        <div className="col-span-2 text-center py-8 text-gray-500">
+                            Нет активных подписок
                         </div>
                     )}
                 </div>
