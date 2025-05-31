@@ -1,6 +1,6 @@
 import { createBrowserRouter, createRoutesFromElements, Route, RouterProvider, Navigate, Outlet } from "react-router-dom";
 
-import { AddCourse, Course, Courses, EditCourse } from "pages/course";
+import { AddCourse, Course, Courses, EditCourse, Reviews } from "pages/course";
 import { User } from "pages/user";
 import { Auth } from "pages/auth"
 
@@ -21,6 +21,7 @@ const routes = createRoutesFromElements(
             <Route path="/course/add" element={<AddCourse />} />
             <Route path="/course/edit/:id" element={<EditCourse />} />
             <Route path="/course/:id" element={<Course />} />
+            <Route path="/course/:courseId/task/:taskId/answers" element={<Reviews />} />
             <Route path="/user/:id" element={<User />} />
         </Route>
         <Route path="/auth" element={<Auth />} />

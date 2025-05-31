@@ -172,8 +172,8 @@ export const courseRepository = () => {
         },
 
         // User Answers methods
-        getAnswers(taskId: number): Promise<IUserAnswer[]> {
-            return apiInstance.get(`/courses/answers/${taskId}`);
+        getAnswers(courseId: number, taskId: number): Promise<IUserAnswer[]> {
+            return apiInstance.get(`/courses/${courseId}/answers/${taskId}`);
         },
 
         uploadAnswer(courseId: number, taskId: number, answerData: ICreateAnswerData): Promise<IAnswerResponse> {
@@ -187,8 +187,8 @@ export const courseRepository = () => {
             });
         },
 
-        deleteAnswer(answerId: number): Promise<IAnswerResponse> {
-            return apiInstance.post(`/courses/answers/${answerId}/delete`);
+        deleteAnswer(courseId: number, taskId: number, answerId: number): Promise<IAnswerResponse> {
+            return apiInstance.remove(`/courses/${courseId}/answers/${taskId}/${answerId}`);
         },
 
         // Task Reviews methods
@@ -200,8 +200,8 @@ export const courseRepository = () => {
             return apiInstance.post(`/task_reviews/${answerId}`, reviewData);
         },
 
-        deleteReview(reviewId: number): Promise<IReviewResponse> {
-            return apiInstance.post(`/task_reviews/${reviewId}/delete`);
+        deleteReview(answerId: number, reviewId: number): Promise<IReviewResponse> {
+            return apiInstance.remove(`/task_reviews/${answerId}/${reviewId}`);
         }
     }
 }

@@ -122,6 +122,8 @@ export interface IUserAnswer {
     user_id: number;
     content_url: string;
     created_at: string;
+    author_feedback?: string;
+    author_file_url?: string;
 }
 
 export interface ICreateAnswerData {

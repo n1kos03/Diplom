@@ -19,30 +19,32 @@ function CourseCard({ course }: { course: ICourse }) {
         day: "numeric",
     })
     return (
-        <Card className="border-gray-200 overflow-hidden flex flex-col h-full">
-            <CardContent className="pt-6 flex-grow">
-                <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center">
-                        {course.rating && course.rating > 0 ? (
-                            <>
-                                <StarRating rating={course.rating} totalStars={5} />
-                                <span className="ml-1 text-sm">{course.rating}</span>
-                            </>
-                        ) : (
-                            <span className="text-sm text-gray-500">Нет оценок</span>
-                        )}
+        <Link to={`/course/${course.id}`}>
+            <Card className="border-gray-200 overflow-hidden flex flex-col h-full">
+                <CardContent className="pt-6 flex-grow">
+                    <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center">
+                            {course.rating && course.rating > 0 ? (
+                                <>
+                                    <StarRating rating={course.rating} totalStars={5} />
+                                    <span className="ml-1 text-sm">{course.rating}</span>
+                                </>
+                            ) : (
+                                <span className="text-sm text-gray-500">Нет оценок</span>
+                            )}
+                        </div>
                     </div>
-                </div>
-                <h3 className="font-bold text-lg mb-2 line-clamp-2">{course.title}</h3>
-                <p className="text-gray-600 text-sm mb-4 line-clamp-3">{course.description}</p>
-                <div className="text-sm text-gray-500 mb-2">
-                    <span>Автор: {course.author_name}</span>
-                </div>
-                <div className="text-xs text-gray-400">
-                    <span>Создано: {formattedDate}</span>
-                </div>
-            </CardContent>
-        </Card>
+                    <h3 className="font-bold text-lg mb-2 line-clamp-2">{course.title}</h3>
+                    <p className="text-gray-600 text-sm mb-4 line-clamp-3">{course.description}</p>
+                    <div className="text-sm text-gray-500 mb-2">
+                        <span>Автор: {course.author_name}</span>
+                    </div>
+                    <div className="text-xs text-gray-400">
+                        <span>Создано: {formattedDate}</span>
+                    </div>
+                </CardContent>
+            </Card>
+        </Link>
     )
 }
 
@@ -127,6 +129,15 @@ export const User = () => {
             }
             await userRepository().updateUser(Number(id), updateData)
             setUser(prev => prev ? { ...prev, nickname: editedName } : null)
+            
+            // Обновляем имя пользователя в localStorage
+            const userStr = localStorage.getItem('user')
+            if (userStr) {
+                const userData = JSON.parse(userStr)
+                userData.user.nickname = editedName
+                localStorage.setItem('user', JSON.stringify(userData))
+            }
+            
             setIsEditModalOpen(false)
         } catch (error) {
             console.error('Ошибка при обновлении имени:', error)
@@ -140,7 +151,7 @@ export const User = () => {
         try {
             const formData = new FormData();
             formData.append('file', file);
-            
+
             await userRepository().uploadPhoto(Number(id), { file });
             await fetchUserPhotos(); // Обновляем список фото после загрузки
         } catch (error) {
