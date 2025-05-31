@@ -67,6 +67,7 @@ func main() {
 	router.PUT("/courses/:id/", handlers.PUTCourse)
 	
 	router.GET("/subscriptions/", handlers.GETSubscriptionsHandler)
+	router.GET("/subscriptions/:user_id/", handlers.GETSubscriptionsByUserIDHandler)
 	router.POST("/subscriptions/", handlers.POSTSubscriptionHandler)
 	router.DELETE("/subscriptions/:course_id/", handlers.DELETESubscriptionHandler)
 

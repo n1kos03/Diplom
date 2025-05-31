@@ -52,6 +52,48 @@ func GETSubscriptionsHandler( w http.ResponseWriter, r *http.Request, _ httprout
 	json.NewEncoder(w).Encode(subscriptions)
 }
 
+func GETSubscriptionsByUserIDHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	userID, err := strconv.Atoi(ps.ByName("user_id"))
+	if err != nil {
+		http.Error(w, "Error converting user ID to int", http.StatusInternalServerError)
+		log.Println("Error converting user ID to int: ", err)
+		return
+	}
+
+	rows, err := database.DB.Query(`SELECT * FROM "Subscriptions" WHERE "User_id" = $1`, userID)
+	if err != nil {
+		http.Error(w, "Error getting data", http.StatusInternalServerError)
+		log.Println("Error getting data: ", err)
+		return
+	}
+
+	var subscriptions []models.Subscription
+
+	for rows.Next() {
+		var subscription models.Subscription
+
+		err := rows.Scan(&subscription.UserID, &subscription.CourseID, &subscription.CreatedAt)
+		if err != nil {
+			http.Error(w, "Error scanning data", http.StatusInternalServerError)
+			log.Println("Error scanning data: ", err)
+			return
+		}
+
+		subscriptions = append(subscriptions, subscription)
+	}
+
+	if err = rows.Err(); err !=nil {
+		http.Error(w, "Error iterating over rows", http.StatusInternalServerError)
+		log.Println("Error iterating over rows: ", err)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+
+	json.NewEncoder(w).Encode(subscriptions)
+}
+
 // POSTSubscriptionHandler creates a new subscription.
 //
 // The handler expects the course ID as a form value from the request body.
