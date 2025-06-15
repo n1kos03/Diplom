@@ -25,7 +25,7 @@ export const Header = () => {
     
     return (
       <header className="w-full flex items-center justify-between px-4 sm:px-8 py-4 bg-white/80 backdrop-blur border-b border-gray-100 z-50 h-16">
-        <div className="font-bold text-xl text-blue-700 tracking-tight">nikitosik</div>
+        <div className="font-bold text-xl text-blue-700 tracking-tight">ArtCourse</div>
         <div className="flex items-center gap-2">
           {isLoggedIn ? (
             <>

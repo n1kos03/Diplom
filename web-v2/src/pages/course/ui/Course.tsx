@@ -300,7 +300,11 @@ export const Course = () => {
                         {/* Course Meta */}
                         <div className="flex flex-wrap items-center gap-4 mb-6">
                             <div className="flex items-center">
-                                <span className="font-semibold">{course.author_name}</span>
+                                <span className="font-semibold">
+                                    <Link to={`/user/${course.author_id}`}>
+                                        {course.author_name}
+                                    </Link>
+                                </span>
                             </div>
 
                             <div className="flex items-center">

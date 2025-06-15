@@ -45,6 +45,8 @@ func GETTaskReviewsHandler(w http.ResponseWriter, r *http.Request, ps httprouter
 		}
 	}
 
+	defer row.Close()
+
 	if err = row.Err(); err != nil {
 		http.Error(w, "Error iterating over rows", http.StatusInternalServerError)
 		return

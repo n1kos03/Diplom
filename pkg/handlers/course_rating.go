@@ -36,6 +36,8 @@ func GETCourseRatingHandler(w http.ResponseWriter, r *http.Request, _ httprouter
 		courseRatings = append(courseRatings, courseRating)
 	}
 
+	defer rows.Close()
+
 	if err = rows.Err(); err != nil {
 		http.Error(w, "Error iterating over rows", http.StatusInternalServerError)
 		return

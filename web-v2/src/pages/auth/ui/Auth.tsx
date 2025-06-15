@@ -110,7 +110,7 @@ export const Auth = () => {
         <div className="hidden lg:block lg:w-1/2 relative overflow-hidden bg-blue-600 rounded-r-3xl">
           {/* Logo */}
           <div className="absolute top-8 left-8 flex items-center gap-2 z-10">
-            <h1 className="text-xl font-bold text-white">nikitosik</h1>
+            <h1 className="text-xl font-bold text-white">ArtCourse</h1>
           </div>
 
           {/* Main text */}

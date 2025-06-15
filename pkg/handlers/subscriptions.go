@@ -82,6 +82,8 @@ func GETSubscriptionsByUserIDHandler(w http.ResponseWriter, r *http.Request, ps 
 		subscriptions = append(subscriptions, subscription)
 	}
 
+	defer rows.Close()
+
 	if err = rows.Err(); err !=nil {
 		http.Error(w, "Error iterating over rows", http.StatusInternalServerError)
 		log.Println("Error iterating over rows: ", err)

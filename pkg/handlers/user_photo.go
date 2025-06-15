@@ -48,6 +48,8 @@ func GETUserPhotoHandler(w http.ResponseWriter, r *http.Request, ps httprouter.P
 		userPhotos = append(userPhotos, userPhoto)
 	}
 
+	defer rows.Close()
+
 	if err = rows.Err(); err != nil {
 		http.Error(w, "Error iterating over rows", http.StatusInternalServerError)
 		return

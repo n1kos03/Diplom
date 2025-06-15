@@ -69,6 +69,8 @@ func GETUsers(w http.ResponseWriter, r *http.Request) {
 		users = append(users, user)
 	}
 
+	defer rows.Close()
+
 	if err = rows.Err(); err != nil {
 		log.Println("Error iteration over rows: ", err)
 		http.Error(w, "Error getting data", http.StatusInternalServerError)
@@ -123,6 +125,8 @@ func GETUserByID(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		}
 	}
 
+	defer row.Close()
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 
@@ -165,6 +169,8 @@ func GETUserByNickname(w http.ResponseWriter, nickname string) {
 
 		users = append(users, user)
 	}
+
+	defer row.Close()
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)

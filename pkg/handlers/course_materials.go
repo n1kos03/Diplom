@@ -58,6 +58,8 @@ func GETCourseMaterialsHandler(w http.ResponseWriter, r *http.Request, ps httpro
 		materials = append(materials, material)
 	}
 
+	defer rows.Close()
+
 	if err = rows.Err(); err != nil {
 		http.Error(w, "Error iterating over rows", http.StatusInternalServerError)
 		return

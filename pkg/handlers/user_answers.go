@@ -56,6 +56,8 @@ func GETUserAnswersHandler(w http.ResponseWriter, r *http.Request, ps httprouter
 		answers = append(answers, answer)
 	}
 
+	defer rows.Close()
+
 	if err = rows.Err(); err != nil {
 		http.Error(w, "Error iterating over rows", http.StatusInternalServerError)
 		return

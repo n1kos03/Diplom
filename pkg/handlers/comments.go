@@ -44,6 +44,8 @@ func GETCommentsHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Pa
 		comments = append(comments, comment)
 	}
 
+	defer rows.Close()
+
 	if err = rows.Err(); err != nil {
 		http.Error(w, "Error iterating over rows", http.StatusInternalServerError)
 		return

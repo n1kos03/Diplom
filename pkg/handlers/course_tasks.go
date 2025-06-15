@@ -57,6 +57,8 @@ func GETCourseTasksHandler(w http.ResponseWriter, r *http.Request, ps httprouter
 		tasks = append(tasks, task)
 	}
 
+	defer rows.Close()
+
 	if err = rows.Err(); err != nil {
 		http.Error(w, "Error iterating over rows", http.StatusInternalServerError)
 		return
@@ -251,6 +253,8 @@ func DELETECourseTasksHandler(w http.ResponseWriter, r *http.Request, ps httprou
 
 		answersOnTask = append(answersOnTask, answer)
 	}
+
+	defer rows.Close()
 
 	if err = rows.Err(); err != nil {
 		http.Error(w, "Error iterating over rows", http.StatusInternalServerError)
