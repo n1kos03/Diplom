@@ -46,8 +46,8 @@ export const userRepository = () => {
             });
         },
 
-        deletePhoto(userId: number): Promise<IPhotoResponse> {
-            return apiInstance.post(`/users/${userId}/user_photos/delete`);
+        deletePhoto(userId: number, photoId: number): Promise<IPhotoResponse> {
+            return apiInstance.remove(`/users/${photoId}/user_photos/`);
         },
 
         getUserSubscriptions(userId: number): Promise<{ course_id: number }[]> {
